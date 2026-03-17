@@ -109,7 +109,3 @@ mosquitto -c mosquitto.conf -v
 | **Figma** | [Sẽ cập nhật] |
 | **API Docs** | http://localhost:5000/api-docs |
 | **GitHub** | https://github.com/Rei-1407/IoT_ReiX |
- 
-| **Figma** | [Sẽ cập nhật] |
-| **API Docs** | http://localhost:5000/api-docs |
-| **GitHub** | https://github.com/Rei-1407/IoT_ReiX |
