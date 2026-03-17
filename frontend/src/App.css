@@ -1,0 +1,15 @@
+/* ===== BACKGROUND GRADIENT (giống Figma) ===== */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  background: linear-gradient(135deg, #a8d8ea 0%, #f2a7c3 50%, #f0c5a8 100%);
+  overflow: hidden;
+}
+
+/* ===== MAIN CONTENT AREA ===== */
+.main-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}

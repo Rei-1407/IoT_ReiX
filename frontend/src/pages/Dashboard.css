@@ -1,0 +1,394 @@
+/* ===== DASHBOARD PAGE ===== */
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 40px);
+  gap: 16px;
+}
+
+/* ===== SENSOR CARDS (3 card trên cùng) ===== */
+.sensor-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.sensor-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.sensor-icon {
+  font-size: 38px;
+  display: flex;
+  align-items: center;
+}
+
+.card-temp .sensor-icon {
+  color: #ef4444;
+}
+.card-hum .sensor-icon {
+  color: #3b82f6;
+}
+.card-lux .sensor-icon {
+  color: #f59e0b;
+}
+
+.sensor-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sensor-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sensor-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  letter-spacing: -0.5px;
+}
+
+/* ===== DASHBOARD BODY (chart + control) ===== */
+.dashboard-body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ===== CHART ===== */
+.chart-container {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.chart-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.chart-time {
+  font-size: 13px;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.chart-wrapper {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ===== CONTROL PANEL ===== */
+.control-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.control-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.control-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.mode-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #aaa;
+  transition: color 0.3s;
+}
+
+.mode-label.mode-active {
+  color: #f59e0b;
+}
+
+.mode-sub {
+  font-size: 11px;
+  color: #999;
+}
+
+/* Toggle Switch (Auto/Manual) */
+.toggle-switch {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: #ccc;
+  position: relative;
+  transition: background 0.3s;
+  cursor: pointer;
+}
+
+.toggle-switch.toggle-on {
+  background: linear-gradient(135deg, #4facfe, #43e97b);
+}
+
+.toggle-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.toggle-on .toggle-knob {
+  transform: translateX(20px);
+}
+
+/* ===== DEVICE CARD ===== */
+.device-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.device-card.device-on {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.device-fire-on {
+  border-left: 4px solid #ef4444;
+}
+.device-light-on {
+  border-left: 4px solid #eab308;
+}
+.device-fan-on {
+  border-left: 4px solid #3b82f6;
+}
+.device-ac-on {
+  border-left: 4px solid #06b6d4;
+}
+
+.device-card.device-pending {
+  opacity: 0.7;
+}
+
+.device-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.device-icon {
+  font-size: 16px;
+  color: #666;
+}
+
+.device-on .device-icon {
+  color: #333;
+}
+
+.device-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+/* Small Toggle (fire, light) */
+.toggle-switch-sm {
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+  background: #ddd;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+
+.toggle-sm-on {
+  background: #ccc;
+}
+.toggle-fire.toggle-sm-on {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+}
+.toggle-light.toggle-sm-on {
+  background: linear-gradient(135deg, #eab308, #fbbf24);
+}
+
+.toggle-knob-sm {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-sm-on .toggle-knob-sm {
+  transform: translateX(22px);
+}
+
+/* Level Buttons (fan, ac) */
+.level-buttons {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.level-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 8px;
+  background: #e5e7eb;
+  color: #555;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.level-btn:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+.level-btn.level-active {
+  background: linear-gradient(135deg, #4facfe, #43e97b);
+  color: white;
+}
+
+.level-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ===== LOADING SPINNER ===== */
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #4facfe;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== FAN SPINNING ===== */
+.fan-spinning {
+  animation: fan-rotate 1s linear infinite;
+}
+
+@keyframes fan-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) {
+  .dashboard-body {
+    grid-template-columns: 1fr 280px;
+  }
+}
+
+@media (max-width: 900px) {
+  .sensor-cards {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== CUSTOM LEGEND ===== */
+.custom-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.legend-line {
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.legend-text {
+  font-size: 14px;
+  font-weight: 700;
+}
