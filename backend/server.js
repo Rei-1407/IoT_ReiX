@@ -60,6 +60,12 @@ function broadcast(event, data) {
 mqttClient.on("message", async (topic, payload) => {
   try {
     const message = JSON.parse(payload.toString());
+    // Cập nhật thời gian nhận message cuối cùng
+    lastMqttMessage = Date.now();
+    if (!esp32Online) {
+      esp32Online = true;
+      broadcast("esp32_status", { online: true });
+    }
     const now = Date.now();
     const timeText = new Date().toLocaleString("vi-VN", {
       hour: "2-digit",
@@ -172,6 +178,28 @@ mqttClient.on("message", async (topic, payload) => {
 });
 
 // ============================================
+// ESP32 ONLINE/OFFLINE DETECTION
+// Nếu > 6 giây không nhận MQTT message → offline
+// ============================================
+let lastMqttMessage = Date.now();
+let esp32Online = false;
+
+// Cập nhật mỗi khi nhận MQTT message (đã có trong handler ở trên)
+// Ta cần thêm vào đầu handler
+
+// Check mỗi 3 giây
+setInterval(() => {
+  const now = Date.now();
+  const wasOnline = esp32Online;
+  esp32Online = now - lastMqttMessage < 6000;
+
+  // Chỉ broadcast khi trạng thái thay đổi
+  if (wasOnline !== esp32Online) {
+    broadcast("esp32_status", { online: esp32Online });
+  }
+}, 3000);
+
+// ============================================
 // REST API ROUTES (sẽ tạo chi tiết ở bước sau)
 // ============================================
 const sensorRoutes = require("./routes/sensor");
@@ -182,9 +210,13 @@ app.use("/api/sensors", sensorRoutes);
 app.use("/api/devices", deviceRoutes);
 app.use("/api/history", historyRoutes);
 
-// ===== Health check =====
+// ===== Health check + ESP32 status =====
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString() });
+  res.json({
+    status: "ok",
+    time: new Date().toISOString(),
+    esp32_online: esp32Online,
+  });
 });
 
 // ============================================

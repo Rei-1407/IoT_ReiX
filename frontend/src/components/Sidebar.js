@@ -23,16 +23,31 @@ function Sidebar() {
     let ws;
     let reconnectTimer;
 
+    // Lấy trạng thái ESP32 ban đầu khi reload
+    fetch("http://localhost:5000/api/health")
+      .then((res) => res.json())
+      .then((data) => setIsOnline(data.esp32_online || false))
+      .catch(() => setIsOnline(false));
+
     const connectWS = () => {
       ws = new WebSocket("ws://localhost:5000");
 
-      ws.onopen = () => {
-        setIsOnline(true);
+      ws.onmessage = (event) => {
+        try {
+          const { event: evtName, data } = JSON.parse(event.data);
+          // Nhận trạng thái ESP32 online/offline từ backend
+          if (evtName === "esp32_status") {
+            setIsOnline(data.online);
+          }
+          // Nếu nhận được sensor_data → ESP32 chắc chắn online
+          if (evtName === "sensor_data") {
+            setIsOnline(true);
+          }
+        } catch (e) {}
       };
 
       ws.onclose = () => {
         setIsOnline(false);
-        // Tự reconnect sau 3 giây
         reconnectTimer = setTimeout(connectWS, 3000);
       };
 
