@@ -25,6 +25,10 @@ const db = require("./config/db");
 // ===== Kết nối MQTT =====
 const mqttClient = require("./config/mqtt");
 
+// ESP32 online detection
+let lastMqttMessage = 0;
+let esp32Online = false;
+
 // ============================================
 // WEBSOCKET — Quản lý client connections
 // Mỗi khi frontend mở trang, nó connect WebSocket
@@ -181,9 +185,6 @@ mqttClient.on("message", async (topic, payload) => {
 // ESP32 ONLINE/OFFLINE DETECTION
 // Nếu > 6 giây không nhận MQTT message → offline
 // ============================================
-let lastMqttMessage = Date.now();
-let esp32Online = false;
-
 // Cập nhật mỗi khi nhận MQTT message (đã có trong handler ở trên)
 // Ta cần thêm vào đầu handler
 

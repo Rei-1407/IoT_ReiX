@@ -384,8 +384,8 @@ function Dashboard() {
               <div className="loading-spinner"></div>
             ) : (
               <div className="level-buttons">
-                {["OFF", "1", "2", "ON"].map((label, idx) => {
-                  const level = label === "ON" ? 3 : idx;
+                {["OFF", "1", "2", "3"].map((label, idx) => {
+                  const level = idx;
                   return (
                     <button
                       key={label}
