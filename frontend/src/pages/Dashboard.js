@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import {
   LineChart,
   Line,
@@ -21,11 +21,10 @@ import {
 import axios from "axios";
 import "./Dashboard.css";
 
-const API = "http://localhost:5000/api";
+var API = "http://localhost:5000/api";
 
-// Custom Legend với icon cho biểu đồ
-const CustomLegend = () => {
-  const items = [
+var CustomLegend = function () {
+  var items = [
     {
       icon: <FaThermometerHalf style={{ color: "#ef4444" }} />,
       label: "Nhiệt độ (°C)",
@@ -45,162 +44,65 @@ const CustomLegend = () => {
 
   return (
     <div className="custom-legend">
-      {items.map((item, idx) => (
-        <div key={idx} className="legend-item">
-          <span className="legend-icon">{item.icon}</span>
-          <span
-            className="legend-line"
-            style={{ background: item.color }}
-          ></span>
-          <span className="legend-text" style={{ color: item.color }}>
-            {item.label}
-          </span>
-        </div>
-      ))}
+      {items.map(function (item, idx) {
+        return (
+          <div key={idx} className="legend-item">
+            <span className="legend-icon">{item.icon}</span>
+            <span
+              className="legend-line"
+              style={{ background: item.color }}
+            ></span>
+            <span className="legend-text" style={{ color: item.color }}>
+              {item.label}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 };
 
-function Dashboard() {
-  // ===== STATE =====
-  const [sensorData, setSensorData] = useState({ temp: 0, hum: 0, lux: 0 });
-  const [chartData, setChartData] = useState([]);
-  const [deviceState, setDeviceState] = useState({
-    fire: { is_on: 0, level: 0 },
-    light: { is_on: 0, level: 0 },
-    fan: { is_on: 0, level: 0 },
-    ac: { is_on: 0, level: 0 },
-  });
-  const [isAutoMode, setIsAutoMode] = useState(true);
-  const [pendingDevices, setPendingDevices] = useState({});
-  const [currentTime, setCurrentTime] = useState("");
-  const [timeoutError, setTimeoutError] = useState(null);
-  const wsRef = useRef(null);
+function Dashboard(props) {
+  var sensorData = props.sensorData;
+  var chartData = props.chartData;
+  var deviceState = props.deviceState;
+  var isAutoMode = props.isAutoMode;
+  var pendingDevices = props.pendingDevices;
+  var setPendingDevices = props.setPendingDevices;
+  var currentTime = props.currentTime;
+  var timeoutError = props.timeoutError;
+  var setTimeoutError = props.setTimeoutError;
 
-  // ===== LOAD TRẠNG THÁI KHI MỞ TRANG (reload giữ nguyên) =====
-  useEffect(() => {
-    const fetchDeviceState = async () => {
-      try {
-        const res = await axios.get(`${API}/devices/state`);
-        const states = {};
-        res.data.data.forEach((d) => {
-          states[d.device_key] = { is_on: d.is_on, level: d.level };
-        });
-        setDeviceState((prev) => ({ ...prev, ...states }));
-      } catch (err) {
-        console.error("Fetch device state error:", err);
-      }
-    };
-    fetchDeviceState();
-  }, []);
-
-  // ===== WEBSOCKET — Nhận data realtime từ backend =====
-  useEffect(() => {
-    let reconnectTimer;
-
-    const connectWS = () => {
-      const ws = new WebSocket("ws://localhost:5000");
-      wsRef.current = ws;
-
-      ws.onmessage = (event) => {
-        const { event: evtName, data } = JSON.parse(event.data);
-
-        if (evtName === "sensor_data") {
-          setSensorData({ temp: data.temp, hum: data.hum, lux: data.lux });
-          setCurrentTime(data.time_text);
-
-          setChartData((prev) => {
-            const newPoint = {
-              time: data.time_text.split(" ")[0],
-              temp: data.temp,
-              hum: data.hum,
-              lux: data.lux,
-            };
-            const updated = [...prev, newPoint];
-            return updated.length > 20 ? updated.slice(-20) : updated;
-          });
-        }
-
-        if (evtName === "device_state") {
-          setIsAutoMode(data.auto);
-          setDeviceState({
-            fire: { is_on: data.fire > 0 ? 1 : 0, level: data.fire },
-            light: { is_on: data.light > 0 ? 1 : 0, level: data.light },
-            fan: { is_on: data.fan > 0 ? 1 : 0, level: data.fan },
-            ac: { is_on: data.ac > 0 ? 1 : 0, level: data.ac },
-          });
-        }
-
-        if (evtName === "control_result") {
-          setPendingDevices((prev) => {
-            const updated = { ...prev };
-            delete updated[data.action];
-            return updated;
-          });
-        }
-        // Nhận timeout — thiết bị không phản hồi sau 10s
-        if (evtName === "control_timeout") {
-          setPendingDevices((prev) => {
-            const updated = { ...prev };
-            delete updated[data.device_key];
-            return updated;
-          });
-          var deviceNames = {
-            fire: "Báo cháy",
-            light: "Đèn ngủ",
-            fan: "Quạt gió",
-            ac: "Điều hòa",
-          };
-          var displayName = deviceNames[data.device_key] || data.device_key;
-          setTimeoutError(displayName);
-          // Tự ẩn thông báo sau 5 giây
-          setTimeout(() => setTimeoutError(null), 5000);
-        }
-      };
-
-      ws.onclose = () => {
-        reconnectTimer = setTimeout(connectWS, 3000);
-      };
-    };
-
-    connectWS();
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-    };
-  }, []);
-
-  // ===== GỬI LỆNH ĐIỀU KHIỂN =====
-  const sendControl = async (deviceKey, value) => {
-    setPendingDevices((prev) => ({ ...prev, [deviceKey]: true }));
-
+  var sendControl = async function (deviceKey, value) {
+    setPendingDevices(function (prev) {
+      return Object.assign({}, prev, { [deviceKey]: true });
+    });
     try {
-      await axios.post(`${API}/devices/control`, {
+      await axios.post(API + "/devices/control", {
         device_key: deviceKey,
         value: value,
       });
     } catch (err) {
       console.error("Control error:", err);
-      setPendingDevices((prev) => {
-        const updated = { ...prev };
+      setPendingDevices(function (prev) {
+        var updated = Object.assign({}, prev);
         delete updated[deviceKey];
         return updated;
       });
     }
-
-    setTimeout(() => {
-      setPendingDevices((prev) => {
-        const updated = { ...prev };
+    setTimeout(function () {
+      setPendingDevices(function (prev) {
+        var updated = Object.assign({}, prev);
         delete updated[deviceKey];
         return updated;
       });
     }, 10000);
   };
 
-  const toggleMode = async () => {
-    const newMode = isAutoMode ? "manual" : "auto";
+  var toggleMode = async function () {
+    var newMode = isAutoMode ? "manual" : "auto";
     try {
-      await axios.post(`${API}/devices/control`, {
+      await axios.post(API + "/devices/control", {
         device_key: "mode",
         value: newMode,
       });
@@ -209,22 +111,22 @@ function Dashboard() {
     }
   };
 
-  const toggleDevice = (deviceKey) => {
-    const current = deviceState[deviceKey];
-    const newValue = current.is_on ? 0 : 1;
+  var toggleDevice = function (deviceKey) {
+    var current = deviceState[deviceKey];
+    var newValue = current.is_on ? 0 : 1;
     sendControl(deviceKey, newValue);
   };
 
-  const setFanLevel = (level) => {
+  var setFanLevel = function (level) {
     sendControl("fan", level);
   };
 
-  const setAcMode = (mode) => {
-    const acMap = { OFF: 0, Sleep: 80, Dry: 150, Cool: 255 };
+  var setAcMode = function (mode) {
+    var acMap = { OFF: 0, Sleep: 80, Dry: 150, Cool: 255 };
     sendControl("ac", acMap[mode] || 0);
   };
 
-  const getAcMode = (level) => {
+  var getAcMode = function (level) {
     if (level === 0) return "OFF";
     if (level <= 80) return "Sleep";
     if (level <= 150) return "Dry";
@@ -233,7 +135,6 @@ function Dashboard() {
 
   return (
     <div className="dashboard-page">
-      {/* THÔNG BÁO LỖI TIMEOUT */}
       {timeoutError && (
         <div className="timeout-alert">
           <span className="timeout-icon">⚠️</span>
@@ -243,13 +144,15 @@ function Dashboard() {
           </span>
           <button
             className="timeout-close"
-            onClick={() => setTimeoutError(null)}
+            onClick={function () {
+              setTimeoutError(null);
+            }}
           >
             ✕
           </button>
         </div>
       )}
-      {/* ===== 3 CARD CẢM BIẾN ===== */}
+
       <div className="sensor-cards">
         <div className="sensor-card card-temp">
           <div className="sensor-icon">
@@ -262,7 +165,6 @@ function Dashboard() {
             </span>
           </div>
         </div>
-
         <div className="sensor-card card-hum">
           <div className="sensor-icon">
             <FaTint />
@@ -272,7 +174,6 @@ function Dashboard() {
             <span className="sensor-value">{sensorData.hum.toFixed(2)} %</span>
           </div>
         </div>
-
         <div className="sensor-card card-lux">
           <div className="sensor-icon">
             <FaSun />
@@ -286,9 +187,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* ===== BIỂU ĐỒ + PANEL ĐIỀU KHIỂN ===== */}
       <div className="dashboard-body">
-        {/* BIỂU ĐỒ REALTIME */}
         <div className="chart-container">
           <div className="chart-header">
             <span className="chart-title">📈 GIÁM SÁT REALTIME</span>
@@ -314,7 +213,7 @@ function Dashboard() {
                   orientation="right"
                   tick={{ fontSize: 13, fontWeight: 600 }}
                 />
-                <Tooltip contentStyle={{ fontSize: 16, fontWeight: 600 }} />
+                <Tooltip contentStyle={{ fontSize: 14, fontWeight: 600 }} />
                 <Legend content={<CustomLegend />} />
                 <Line
                   yAxisId="left"
@@ -348,26 +247,31 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* PANEL ĐIỀU KHIỂN */}
         <div className="control-panel">
           <div className="control-header">
             <span className="control-title">CHẾ ĐỘ</span>
             <div className="mode-toggle" onClick={toggleMode}>
               <span
-                className={`mode-label ${!isAutoMode ? "mode-active" : ""}`}
+                className={"mode-label " + (!isAutoMode ? "mode-active" : "")}
               >
                 MANUAL
               </span>
-              <div className={`toggle-switch ${isAutoMode ? "toggle-on" : ""}`}>
+              <div
+                className={"toggle-switch " + (isAutoMode ? "toggle-on" : "")}
+              >
                 <div className="toggle-knob"></div>
               </div>
             </div>
             <span className="mode-sub">Điều khiển thủ công</span>
           </div>
 
-          {/* Báo cháy */}
           <div
-            className={`device-card ${deviceState.fire.is_on ? "device-on device-fire-on" : ""} ${pendingDevices.fire ? "device-pending" : ""}`}
+            className={
+              "device-card " +
+              (deviceState.fire.is_on ? "device-on device-fire-on" : "") +
+              " " +
+              (pendingDevices.fire ? "device-pending" : "")
+            }
           >
             <div className="device-left">
               <FaFire className="device-icon" />
@@ -377,17 +281,26 @@ function Dashboard() {
               <div className="loading-spinner"></div>
             ) : (
               <div
-                className={`toggle-switch-sm ${deviceState.fire.is_on ? "toggle-sm-on toggle-fire" : ""}`}
-                onClick={() => !isAutoMode && toggleDevice("fire")}
+                className={
+                  "toggle-switch-sm " +
+                  (deviceState.fire.is_on ? "toggle-sm-on toggle-fire" : "")
+                }
+                onClick={function () {
+                  if (!isAutoMode) toggleDevice("fire");
+                }}
               >
                 <div className="toggle-knob-sm"></div>
               </div>
             )}
           </div>
 
-          {/* Đèn ngủ */}
           <div
-            className={`device-card ${deviceState.light.is_on ? "device-on device-light-on" : ""} ${pendingDevices.light ? "device-pending" : ""}`}
+            className={
+              "device-card " +
+              (deviceState.light.is_on ? "device-on device-light-on" : "") +
+              " " +
+              (pendingDevices.light ? "device-pending" : "")
+            }
           >
             <div className="device-left">
               <FaLightbulb className="device-icon" />
@@ -397,21 +310,33 @@ function Dashboard() {
               <div className="loading-spinner"></div>
             ) : (
               <div
-                className={`toggle-switch-sm ${deviceState.light.is_on ? "toggle-sm-on toggle-light" : ""}`}
-                onClick={() => !isAutoMode && toggleDevice("light")}
+                className={
+                  "toggle-switch-sm " +
+                  (deviceState.light.is_on ? "toggle-sm-on toggle-light" : "")
+                }
+                onClick={function () {
+                  if (!isAutoMode) toggleDevice("light");
+                }}
               >
                 <div className="toggle-knob-sm"></div>
               </div>
             )}
           </div>
 
-          {/* Quạt gió */}
           <div
-            className={`device-card ${deviceState.fan.level > 0 ? "device-on device-fan-on" : ""} ${pendingDevices.fan ? "device-pending" : ""}`}
+            className={
+              "device-card " +
+              (deviceState.fan.level > 0 ? "device-on device-fan-on" : "") +
+              " " +
+              (pendingDevices.fan ? "device-pending" : "")
+            }
           >
             <div className="device-left">
               <FaFan
-                className={`device-icon ${deviceState.fan.level > 0 ? "fan-spinning" : ""}`}
+                className={
+                  "device-icon " +
+                  (deviceState.fan.level > 0 ? "fan-spinning" : "")
+                }
               />
               <span className="device-name">Quạt gió</span>
             </div>
@@ -419,13 +344,18 @@ function Dashboard() {
               <div className="loading-spinner"></div>
             ) : (
               <div className="level-buttons">
-                {["OFF", "1", "2", "3"].map((label, idx) => {
-                  const level = idx;
+                {["OFF", "1", "2", "3"].map(function (label, idx) {
+                  var level = idx;
                   return (
                     <button
                       key={label}
-                      className={`level-btn ${deviceState.fan.level === level ? "level-active" : ""}`}
-                      onClick={() => !isAutoMode && setFanLevel(level)}
+                      className={
+                        "level-btn " +
+                        (deviceState.fan.level === level ? "level-active" : "")
+                      }
+                      onClick={function () {
+                        if (!isAutoMode) setFanLevel(level);
+                      }}
                       disabled={isAutoMode}
                     >
                       {label}
@@ -436,9 +366,13 @@ function Dashboard() {
             )}
           </div>
 
-          {/* Điều hòa */}
           <div
-            className={`device-card ${deviceState.ac.level > 0 ? "device-on device-ac-on" : ""} ${pendingDevices.ac ? "device-pending" : ""}`}
+            className={
+              "device-card " +
+              (deviceState.ac.level > 0 ? "device-on device-ac-on" : "") +
+              " " +
+              (pendingDevices.ac ? "device-pending" : "")
+            }
           >
             <div className="device-left">
               <FaSnowflake className="device-icon" />
@@ -448,16 +382,25 @@ function Dashboard() {
               <div className="loading-spinner"></div>
             ) : (
               <div className="level-buttons">
-                {["OFF", "Sleep", "Dry", "Cool"].map((mode) => (
-                  <button
-                    key={mode}
-                    className={`level-btn ${getAcMode(deviceState.ac.level) === mode ? "level-active" : ""}`}
-                    onClick={() => !isAutoMode && setAcMode(mode)}
-                    disabled={isAutoMode}
-                  >
-                    {mode}
-                  </button>
-                ))}
+                {["OFF", "Sleep", "Dry", "Cool"].map(function (mode) {
+                  return (
+                    <button
+                      key={mode}
+                      className={
+                        "level-btn " +
+                        (getAcMode(deviceState.ac.level) === mode
+                          ? "level-active"
+                          : "")
+                      }
+                      onClick={function () {
+                        if (!isAutoMode) setAcMode(mode);
+                      }}
+                      disabled={isAutoMode}
+                    >
+                      {mode}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

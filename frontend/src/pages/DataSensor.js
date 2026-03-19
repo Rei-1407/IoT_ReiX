@@ -17,7 +17,8 @@ function DataSensor() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const searchTimer = React.useRef(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [firstLoad, setFirstLoad] = useState(true);
 
   // Tự tính số dòng theo chiều cao màn hình
   const getPageLimit = () => {
@@ -33,7 +34,7 @@ function DataSensor() {
   // Fetch data từ backend — mọi logic xử lý ở backend
   const fetchData = useCallback(
     async (page = 1) => {
-      setLoading(true);
+      if (firstLoad) setLoading(true);
       try {
         const res = await axios.get(`${API}/sensors`, {
           params: {
@@ -50,6 +51,7 @@ function DataSensor() {
         console.error("Fetch sensor data error:", err);
       }
       setLoading(false);
+      setFirstLoad(false);
     },
     [sensorType, sortOrder, search],
   );

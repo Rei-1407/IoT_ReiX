@@ -17,7 +17,8 @@ function ActionHistory() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const searchTimer = React.useRef(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [firstLoad, setFirstLoad] = useState(true);
 
   const getPageLimit = () => {
     const screenHeight = window.innerHeight;
@@ -31,7 +32,7 @@ function ActionHistory() {
 
   const fetchData = useCallback(
     async (page = 1) => {
-      setLoading(true);
+      if (firstLoad) setLoading(true);
       try {
         const res = await axios.get(`${API}/history`, {
           params: {
@@ -48,6 +49,7 @@ function ActionHistory() {
         console.error("Fetch history error:", err);
       }
       setLoading(false);
+      setFirstLoad(false);
     },
     [deviceType, sortOrder, search],
   );
