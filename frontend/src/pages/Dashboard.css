@@ -392,3 +392,44 @@
   font-size: 14px;
   font-weight: 700;
 }
+
+/* ===== TIMEOUT ALERT ===== */
+.timeout-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  color: #991b1b;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideDown 0.3s ease;
+  flex-shrink: 0;
+}
+
+.timeout-icon {
+  font-size: 20px;
+}
+
+.timeout-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #991b1b;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

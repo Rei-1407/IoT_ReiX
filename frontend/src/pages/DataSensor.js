@@ -16,6 +16,7 @@ function DataSensor() {
   const [sortOrder, setSortOrder] = useState("desc");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const searchTimer = React.useRef(null);
   const [loading, setLoading] = useState(false);
 
   // Tự tính số dòng theo chiều cao màn hình
@@ -61,6 +62,15 @@ function DataSensor() {
   // Xử lý tìm kiếm khi nhấn Enter hoặc click icon
   const handleSearch = () => {
     setSearch(searchInput);
+  };
+
+  // Tìm realtime: gõ tới đâu ra tới đó (debounce 400ms)
+  const handleInputChange = (value) => {
+    setSearchInput(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setSearch(value);
+    }, 400);
   };
 
   const handleKeyDown = (e) => {
@@ -149,7 +159,7 @@ function DataSensor() {
               className="search-input"
               placeholder="Tìm kiếm..."
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
             />
             <FaSearch className="search-icon" onClick={handleSearch} />

@@ -204,7 +204,7 @@ setInterval(() => {
 // REST API ROUTES (sẽ tạo chi tiết ở bước sau)
 // ============================================
 const sensorRoutes = require("./routes/sensor");
-const deviceRoutes = require("./routes/device");
+const deviceRoutes = require("./routes/device")(broadcast);
 const historyRoutes = require("./routes/history");
 
 app.use("/api/sensors", sensorRoutes);

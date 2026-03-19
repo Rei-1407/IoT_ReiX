@@ -74,6 +74,7 @@ function Dashboard() {
   const [isAutoMode, setIsAutoMode] = useState(true);
   const [pendingDevices, setPendingDevices] = useState({});
   const [currentTime, setCurrentTime] = useState("");
+  const [timeoutError, setTimeoutError] = useState(null);
   const wsRef = useRef(null);
 
   // ===== LOAD TRẠNG THÁI KHI MỞ TRANG (reload giữ nguyên) =====
@@ -136,6 +137,24 @@ function Dashboard() {
             delete updated[data.action];
             return updated;
           });
+        }
+        // Nhận timeout — thiết bị không phản hồi sau 10s
+        if (evtName === "control_timeout") {
+          setPendingDevices((prev) => {
+            const updated = { ...prev };
+            delete updated[data.device_key];
+            return updated;
+          });
+          var deviceNames = {
+            fire: "Báo cháy",
+            light: "Đèn ngủ",
+            fan: "Quạt gió",
+            ac: "Điều hòa",
+          };
+          var displayName = deviceNames[data.device_key] || data.device_key;
+          setTimeoutError(displayName);
+          // Tự ẩn thông báo sau 5 giây
+          setTimeout(() => setTimeoutError(null), 5000);
         }
       };
 
@@ -214,6 +233,22 @@ function Dashboard() {
 
   return (
     <div className="dashboard-page">
+      {/* THÔNG BÁO LỖI TIMEOUT */}
+      {timeoutError && (
+        <div className="timeout-alert">
+          <span className="timeout-icon">⚠️</span>
+          <span>
+            Thiết bị <strong>{timeoutError}</strong> không phản hồi sau 10 giây.
+            Kiểm tra kết nối phần cứng!
+          </span>
+          <button
+            className="timeout-close"
+            onClick={() => setTimeoutError(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* ===== 3 CARD CẢM BIẾN ===== */}
       <div className="sensor-cards">
         <div className="sensor-card card-temp">
