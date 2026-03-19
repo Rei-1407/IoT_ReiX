@@ -112,7 +112,7 @@ function Profile() {
             <h3 className="section-title">TÀI LIỆU VÀ BÁO CÁO</h3>
             <div className="links-grid">
               <a
-                href="#"
+                href="https://www.figma.com/design/BPzfNFCGqc96vAY7A6f4gq/IoT---SmartHome---GHL?node-id=31-504&t=lShU1mpzhQuiFHgP-1"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="link-card"
@@ -127,7 +127,7 @@ function Profile() {
               </a>
 
               <a
-                href="#"
+                href="https://drive.google.com/file/d/1IfH4jPFTF3VJgNCdiNQo_t3S1-BFlHS4/view?usp=sharing"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="link-card"
@@ -157,7 +157,7 @@ function Profile() {
               </a>
 
               <a
-                href="#"
+                href="https://github.com/Rei-1407/IoT_ReiX"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="link-card"

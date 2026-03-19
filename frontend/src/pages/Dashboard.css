@@ -433,3 +433,136 @@
     transform: translateY(0);
   }
 }
+
+/* ===== MODE LABEL ===== */
+.mode-active-manual {
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mode-active-auto {
+  color: #22c55e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ===== FIRE ANIMATION — hiệu ứng cháy ===== */
+.fire-active {
+  color: #ef4444 !important;
+  animation: fire-glow 0.5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 6px #ef4444);
+}
+
+@keyframes fire-glow {
+  from {
+    filter: drop-shadow(0 0 4px #ef4444) drop-shadow(0 0 8px #ff6b35);
+    transform: scale(1);
+  }
+  to {
+    filter: drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 16px #ff6b35)
+      drop-shadow(0 0 24px #fbbf24);
+    transform: scale(1.15);
+  }
+}
+
+/* ===== LIGHT ANIMATION — vầng hào quang ===== */
+.light-active {
+  color: #fbbf24 !important;
+  animation: light-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes light-glow {
+  from {
+    filter: drop-shadow(0 0 4px #fbbf24);
+    transform: scale(1);
+  }
+  to {
+    filter: drop-shadow(0 0 10px #fbbf24) drop-shadow(0 0 20px #fde68a)
+      drop-shadow(0 0 30px #fffbeb);
+    transform: scale(1.1);
+  }
+}
+
+/* ===== FAN ANIMATION — quay theo cấp độ ===== */
+.fan-spin-1 {
+  color: #3b82f6 !important;
+  animation: fan-rotate 2s linear infinite;
+}
+
+.fan-spin-2 {
+  color: #3b82f6 !important;
+  animation: fan-rotate 1s linear infinite;
+}
+
+.fan-spin-3 {
+  color: #3b82f6 !important;
+  animation: fan-rotate 0.4s linear infinite;
+}
+
+/* Xóa class cũ nếu còn */
+.fan-spinning {
+  animation: fan-rotate 1s linear infinite;
+}
+
+@keyframes fan-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== AC ANIMATION — rung theo chế độ ===== */
+.ac-mode-sleep {
+  color: #06b6d4 !important;
+  animation: ac-vibrate-light 0.3s ease-in-out infinite;
+}
+
+.ac-mode-dry {
+  color: #06b6d4 !important;
+  animation: ac-vibrate-medium 0.2s ease-in-out infinite;
+}
+
+.ac-mode-cool {
+  color: #06b6d4 !important;
+  animation: ac-vibrate-strong 0.1s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #06b6d4);
+}
+
+@keyframes ac-vibrate-light {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-0.5px);
+  }
+  75% {
+    transform: translateX(0.5px);
+  }
+}
+
+@keyframes ac-vibrate-medium {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-1px) rotate(-2deg);
+  }
+  75% {
+    transform: translateX(1px) rotate(2deg);
+  }
+}
+
+@keyframes ac-vibrate-strong {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px) rotate(-3deg);
+  }
+  75% {
+    transform: translateX(2px) rotate(3deg);
+  }
+}

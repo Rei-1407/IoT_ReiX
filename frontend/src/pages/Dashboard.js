@@ -252,9 +252,12 @@ function Dashboard(props) {
             <span className="control-title">CHẾ ĐỘ</span>
             <div className="mode-toggle" onClick={toggleMode}>
               <span
-                className={"mode-label " + (!isAutoMode ? "mode-active" : "")}
+                className={
+                  "mode-label " +
+                  (!isAutoMode ? "mode-active-manual" : "mode-active-auto")
+                }
               >
-                MANUAL
+                {isAutoMode ? "AUTO" : "MANUAL"}
               </span>
               <div
                 className={"toggle-switch " + (isAutoMode ? "toggle-on" : "")}
@@ -274,7 +277,11 @@ function Dashboard(props) {
             }
           >
             <div className="device-left">
-              <FaFire className="device-icon" />
+              <FaFire
+                className={
+                  "device-icon " + (deviceState.fire.is_on ? "fire-active" : "")
+                }
+              />
               <span className="device-name">Báo cháy</span>
             </div>
             {pendingDevices.fire ? (
@@ -303,7 +310,12 @@ function Dashboard(props) {
             }
           >
             <div className="device-left">
-              <FaLightbulb className="device-icon" />
+              <FaLightbulb
+                className={
+                  "device-icon " +
+                  (deviceState.light.is_on ? "light-active" : "")
+                }
+              />
               <span className="device-name">Đèn ngủ</span>
             </div>
             {pendingDevices.light ? (
@@ -335,7 +347,9 @@ function Dashboard(props) {
               <FaFan
                 className={
                   "device-icon " +
-                  (deviceState.fan.level > 0 ? "fan-spinning" : "")
+                  (deviceState.fan.level > 0
+                    ? "fan-spin-" + deviceState.fan.level
+                    : "")
                 }
               />
               <span className="device-name">Quạt gió</span>
@@ -375,7 +389,14 @@ function Dashboard(props) {
             }
           >
             <div className="device-left">
-              <FaSnowflake className="device-icon" />
+              <FaSnowflake
+                className={
+                  "device-icon " +
+                  (deviceState.ac.level > 0
+                    ? "ac-mode-" + getAcMode(deviceState.ac.level).toLowerCase()
+                    : "")
+                }
+              />
               <span className="device-name">Điều hòa</span>
             </div>
             {pendingDevices.ac ? (
