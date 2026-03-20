@@ -31,7 +31,7 @@ function ActionHistory() {
   var [appliedTimeTo, setAppliedTimeTo] = useState("");
 
   var getPageLimit = function () {
-    return Math.max(5, Math.floor((window.innerHeight - 220) / 45));
+    return Math.max(5, Math.floor((window.innerHeight - 220) / 48) - 1);
   };
   var [limit] = useState(getPageLimit());
 

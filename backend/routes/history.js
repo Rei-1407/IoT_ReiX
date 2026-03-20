@@ -1,7 +1,6 @@
 const router = require("express").Router();
 const db = require("../config/db");
 
-// Bỏ dấu tiếng Việt
 function removeAccents(str) {
   return str
     .normalize("NFD")
@@ -12,18 +11,13 @@ function removeAccents(str) {
     .trim();
 }
 
-// Tìm tất cả giá trị DB khớp với input
 function getSearchExtras(search) {
   var input = removeAccents(search);
   var extras = [];
-
-  // Action mapping
   var actionMap = [
     { keywords: ["bat", "bật"], value: "ON" },
     { keywords: ["tat", "tắt"], value: "OFF" },
   ];
-
-  // Status mapping
   var statusMap = [
     {
       keywords: ["cho", "chờ", "pending", "dang cho", "đang chờ"],
@@ -44,8 +38,6 @@ function getSearchExtras(search) {
       value: "FAILED",
     },
   ];
-
-  // Device mapping
   var deviceMap = [
     {
       keywords: ["bao chay", "báo cháy", "chay", "cháy", "fire"],
@@ -69,31 +61,26 @@ function getSearchExtras(search) {
     item.keywords.forEach(function (kw) {
       var kwClean = removeAccents(kw);
       if (kwClean.startsWith(input) || input.startsWith(kwClean)) {
-        if (extras.indexOf("action:" + item.value) === -1) {
+        if (extras.indexOf("action:" + item.value) === -1)
           extras.push("action:" + item.value);
-        }
       }
     });
   });
-
   statusMap.forEach(function (item) {
     item.keywords.forEach(function (kw) {
       var kwClean = removeAccents(kw);
       if (kwClean.startsWith(input) || input.startsWith(kwClean)) {
-        if (extras.indexOf("status:" + item.value) === -1) {
+        if (extras.indexOf("status:" + item.value) === -1)
           extras.push("status:" + item.value);
-        }
       }
     });
   });
-
   deviceMap.forEach(function (item) {
     item.keywords.forEach(function (kw) {
       var kwClean = removeAccents(kw);
       if (kwClean.startsWith(input) || input.startsWith(kwClean)) {
-        if (extras.indexOf("device:" + item.value) === -1) {
+        if (extras.indexOf("device:" + item.value) === -1)
           extras.push("device:" + item.value);
-        }
       }
     });
   });
@@ -107,10 +94,10 @@ router.get("/", async (req, res) => {
     var limit = parseInt(req.query.limit) || 10;
     var offset = (page - 1) * limit;
     var search = req.query.search || "";
-    var timeFrom = req.query.timeFrom || "";
-    var timeTo = req.query.timeTo || "";
     var deviceType = req.query.device || "";
     var sortOrder = req.query.sort || "desc";
+    var timeFrom = req.query.timeFrom || "";
+    var timeTo = req.query.timeTo || "";
 
     var whereClause = "WHERE 1=1";
     var params = [];
@@ -124,48 +111,30 @@ router.get("/", async (req, res) => {
       var s = "%" + search + "%";
       var conditions = [];
       var searchParams = [];
-
-      // Tìm chung: ID, thời gian
       conditions.push("CAST(dh.id AS CHAR) LIKE ?");
       searchParams.push(s);
       conditions.push("dh.time_text LIKE ?");
       searchParams.push(s);
       conditions.push("d.device_name LIKE ?");
       searchParams.push(s);
-
-      // Tìm mở rộng: không dấu, viết tắt, tiếng Việt
       var extras = getSearchExtras(search);
       extras.forEach(function (extra) {
         var parts = extra.split(":");
-        var type = parts[0];
-        var value = parts[1];
-
-        if (type === "action") {
+        if (parts[0] === "action") {
           conditions.push("dh.action = ?");
-          searchParams.push(value);
-        } else if (type === "status") {
+          searchParams.push(parts[1]);
+        } else if (parts[0] === "status") {
           conditions.push("dh.status = ?");
-          searchParams.push(value);
-        } else if (type === "device") {
+          searchParams.push(parts[1]);
+        } else if (parts[0] === "device") {
           conditions.push("d.device_name = ?");
-          searchParams.push(value);
+          searchParams.push(parts[1]);
         }
       });
-
       whereClause += " AND (" + conditions.join(" OR ") + ")";
       params.push.apply(params, searchParams);
     }
 
-    if (timeFrom) {
-      whereClause += " AND dh.time_text >= ?";
-      params.push(timeFrom);
-    }
-    if (timeTo) {
-      whereClause += " AND dh.time_text <= ?";
-      params.push(timeTo);
-    }
-    var timeFrom = req.query.timeFrom || "";
-    var timeTo = req.query.timeTo || "";
     if (timeFrom) {
       whereClause += " AND dh.created_ts_ms >= ?";
       params.push(new Date(timeFrom).getTime());
@@ -174,6 +143,7 @@ router.get("/", async (req, res) => {
       whereClause += " AND dh.created_ts_ms <= ?";
       params.push(new Date(timeTo).getTime());
     }
+
     var [countResult] = await db.execute(
       "SELECT COUNT(*) as total FROM device_history dh JOIN devices d ON dh.device_id = d.id " +
         whereClause,

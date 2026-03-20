@@ -14,7 +14,6 @@ function removeAccents(str) {
 function getSensorExtras(search) {
   var input = removeAccents(search);
   var extras = [];
-
   var sensorMap = [
     {
       keywords: [
@@ -45,18 +44,14 @@ function getSensorExtras(search) {
       value: "Ánh sáng",
     },
   ];
-
   sensorMap.forEach(function (item) {
     item.keywords.forEach(function (kw) {
       var kwClean = removeAccents(kw);
       if (kwClean.startsWith(input) || input.startsWith(kwClean)) {
-        if (extras.indexOf(item.value) === -1) {
-          extras.push(item.value);
-        }
+        if (extras.indexOf(item.value) === -1) extras.push(item.value);
       }
     });
   });
-
   return extras;
 }
 
@@ -66,10 +61,10 @@ router.get("/", async (req, res) => {
     var limit = parseInt(req.query.limit) || 10;
     var offset = (page - 1) * limit;
     var search = req.query.search || "";
-    var timeFrom = req.query.timeFrom || "";
-    var timeTo = req.query.timeTo || "";
     var sensorType = req.query.type || "";
     var sortOrder = req.query.sort || "desc";
+    var timeFrom = req.query.timeFrom || "";
+    var timeTo = req.query.timeTo || "";
 
     var whereClause = "WHERE 1=1";
     var params = [];
@@ -83,8 +78,6 @@ router.get("/", async (req, res) => {
       var s = "%" + search + "%";
       var conditions = [];
       var searchParams = [];
-
-      // Tìm chung: ID, giá trị, thời gian, tên cảm biến
       conditions.push("CAST(sr.id AS CHAR) LIKE ?");
       searchParams.push(s);
       conditions.push("s.sensor_name LIKE ?");
@@ -93,28 +86,15 @@ router.get("/", async (req, res) => {
       searchParams.push(s);
       conditions.push("sr.time_text LIKE ?");
       searchParams.push(s);
-
-      // Tìm mở rộng: không dấu, tiếng Anh
       var extras = getSensorExtras(search);
       extras.forEach(function (name) {
         conditions.push("s.sensor_name = ?");
         searchParams.push(name);
       });
-
       whereClause += " AND (" + conditions.join(" OR ") + ")";
       params.push.apply(params, searchParams);
     }
 
-    if (timeFrom) {
-      whereClause += " AND sr.time_text >= ?";
-      params.push(timeFrom);
-    }
-    if (timeTo) {
-      whereClause += " AND sr.time_text <= ?";
-      params.push(timeTo);
-    }
-    var timeFrom = req.query.timeFrom || "";
-    var timeTo = req.query.timeTo || "";
     if (timeFrom) {
       whereClause += " AND sr.ts_ms >= ?";
       params.push(new Date(timeFrom).getTime());
@@ -123,6 +103,7 @@ router.get("/", async (req, res) => {
       whereClause += " AND sr.ts_ms <= ?";
       params.push(new Date(timeTo).getTime());
     }
+
     var [countResult] = await db.execute(
       "SELECT COUNT(*) as total FROM sensor_readings sr JOIN sensors s ON sr.sensor_id = s.id " +
         whereClause,
