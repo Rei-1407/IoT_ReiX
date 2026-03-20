@@ -66,6 +66,8 @@ router.get("/", async (req, res) => {
     var limit = parseInt(req.query.limit) || 10;
     var offset = (page - 1) * limit;
     var search = req.query.search || "";
+    var timeFrom = req.query.timeFrom || "";
+    var timeTo = req.query.timeTo || "";
     var sensorType = req.query.type || "";
     var sortOrder = req.query.sort || "desc";
 
@@ -103,6 +105,24 @@ router.get("/", async (req, res) => {
       params.push.apply(params, searchParams);
     }
 
+    if (timeFrom) {
+      whereClause += " AND sr.time_text >= ?";
+      params.push(timeFrom);
+    }
+    if (timeTo) {
+      whereClause += " AND sr.time_text <= ?";
+      params.push(timeTo);
+    }
+    var timeFrom = req.query.timeFrom || "";
+    var timeTo = req.query.timeTo || "";
+    if (timeFrom) {
+      whereClause += " AND sr.ts_ms >= ?";
+      params.push(new Date(timeFrom).getTime());
+    }
+    if (timeTo) {
+      whereClause += " AND sr.ts_ms <= ?";
+      params.push(new Date(timeTo).getTime());
+    }
     var [countResult] = await db.execute(
       "SELECT COUNT(*) as total FROM sensor_readings sr JOIN sensors s ON sr.sensor_id = s.id " +
         whereClause,

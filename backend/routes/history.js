@@ -107,6 +107,8 @@ router.get("/", async (req, res) => {
     var limit = parseInt(req.query.limit) || 10;
     var offset = (page - 1) * limit;
     var search = req.query.search || "";
+    var timeFrom = req.query.timeFrom || "";
+    var timeTo = req.query.timeTo || "";
     var deviceType = req.query.device || "";
     var sortOrder = req.query.sort || "desc";
 
@@ -154,6 +156,24 @@ router.get("/", async (req, res) => {
       params.push.apply(params, searchParams);
     }
 
+    if (timeFrom) {
+      whereClause += " AND dh.time_text >= ?";
+      params.push(timeFrom);
+    }
+    if (timeTo) {
+      whereClause += " AND dh.time_text <= ?";
+      params.push(timeTo);
+    }
+    var timeFrom = req.query.timeFrom || "";
+    var timeTo = req.query.timeTo || "";
+    if (timeFrom) {
+      whereClause += " AND dh.created_ts_ms >= ?";
+      params.push(new Date(timeFrom).getTime());
+    }
+    if (timeTo) {
+      whereClause += " AND dh.created_ts_ms <= ?";
+      params.push(new Date(timeTo).getTime());
+    }
     var [countResult] = await db.execute(
       "SELECT COUNT(*) as total FROM device_history dh JOIN devices d ON dh.device_id = d.id " +
         whereClause,

@@ -1,129 +1,181 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { FaSearch } from "react-icons/fa";
+import {
+  FaSearch,
+  FaFileExport,
+  FaChevronDown,
+  FaChevronUp,
+} from "react-icons/fa";
 import "./ActionHistory.css";
 
-const API = "http://localhost:5000/api";
+var API = "http://localhost:5000/api";
 
 function ActionHistory() {
-  const [data, setData] = useState([]);
-  const [pagination, setPagination] = useState({
+  var [data, setData] = useState([]);
+  var [pagination, setPagination] = useState({
     page: 1,
     totalPages: 1,
     total: 0,
   });
-  const [deviceType, setDeviceType] = useState("");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const searchTimer = React.useRef(null);
-  const [loading, setLoading] = useState(true);
-  const [firstLoad, setFirstLoad] = useState(true);
+  var [deviceType, setDeviceType] = useState("");
+  var [sortOrder, setSortOrder] = useState("desc");
+  var [search, setSearch] = useState("");
+  var [searchInput, setSearchInput] = useState("");
+  var [loading, setLoading] = useState(true);
+  var [firstLoad, setFirstLoad] = useState(true);
+  var searchTimer = React.useRef(null);
+  var [showTimeFilter, setShowTimeFilter] = useState(false);
+  var [timeFrom, setTimeFrom] = useState("");
+  var [timeTo, setTimeTo] = useState("");
+  var [appliedTimeFrom, setAppliedTimeFrom] = useState("");
+  var [appliedTimeTo, setAppliedTimeTo] = useState("");
 
-  const getPageLimit = () => {
-    const screenHeight = window.innerHeight;
-    const rowHeight = 45;
-    const headerSpace = 200;
-    const available = screenHeight - headerSpace;
-    return Math.max(5, Math.floor(available / rowHeight));
+  var getPageLimit = function () {
+    return Math.max(5, Math.floor((window.innerHeight - 220) / 45));
   };
+  var [limit] = useState(getPageLimit());
 
-  const [limit] = useState(getPageLimit());
-
-  const fetchData = useCallback(
-    async (page = 1) => {
+  var fetchData = useCallback(
+    async function (page) {
       if (firstLoad) setLoading(true);
       try {
-        const res = await axios.get(`${API}/history`, {
+        var res = await axios.get(API + "/history", {
           params: {
-            page,
+            page: page || 1,
             limit: limit,
             device: deviceType,
             sort: sortOrder,
             search: search,
+            timeFrom: appliedTimeFrom,
+            timeTo: appliedTimeTo,
           },
         });
         setData(res.data.data);
         setPagination(res.data.pagination);
       } catch (err) {
-        console.error("Fetch history error:", err);
+        console.error("Fetch error:", err);
       }
       setLoading(false);
       setFirstLoad(false);
     },
-    [deviceType, sortOrder, search],
+    [
+      deviceType,
+      sortOrder,
+      search,
+      limit,
+      appliedTimeFrom,
+      appliedTimeTo,
+      firstLoad,
+    ],
   );
 
-  useEffect(() => {
-    fetchData(1);
-  }, [fetchData]);
+  useEffect(
+    function () {
+      fetchData(1);
+    },
+    [fetchData],
+  );
 
-  const handleSearch = () => {
-    setSearch(searchInput);
-  };
-
-  const handleInputChange = (value) => {
+  var handleInputChange = function (value) {
     setSearchInput(value);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
+    searchTimer.current = setTimeout(function () {
       setSearch(value);
     }, 400);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleSearch();
-  };
-
-  // Badge màu cho status
-  const getStatusBadge = (status) => {
-    const map = {
-      PENDING: { label: "Chờ", className: "badge-pending" },
-      SUCCESS: { label: "Thành công", className: "badge-success" },
-      FAILED: { label: "Thất bại", className: "badge-failed" },
+  var getStatusBadge = function (status) {
+    var m = {
+      PENDING: { l: "Chờ", c: "badge-pending" },
+      SUCCESS: { l: "Thành công", c: "badge-success" },
+      FAILED: { l: "Thất bại", c: "badge-failed" },
     };
-    const info = map[status] || { label: status, className: "" };
-    return (
-      <span className={`status-badge ${info.className}`}>{info.label}</span>
-    );
+    var info = m[status] || { l: status, c: "" };
+    return <span className={"status-badge " + info.c}>{info.l}</span>;
   };
 
-  // Phân trang kiểu Google
-  const getPageNumbers = () => {
-    const { page, totalPages } = pagination;
-    const pages = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible + 2) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
+  var getPageNumbers = function () {
+    var p = pagination.page,
+      tp = pagination.totalPages,
+      pages = [];
+    if (tp <= 7) {
+      for (var i = 1; i <= tp; i++) pages.push(i);
     } else {
       pages.push(1);
-      let start = Math.max(2, page - 1);
-      let end = Math.min(totalPages - 1, page + 1);
-      if (page <= 3) {
-        start = 2;
-        end = maxVisible;
-      } else if (page >= totalPages - 2) {
-        start = totalPages - maxVisible + 1;
-        end = totalPages - 1;
+      var s = Math.max(2, p - 1),
+        e = Math.min(tp - 1, p + 1);
+      if (p <= 3) {
+        s = 2;
+        e = 5;
+      } else if (p >= tp - 2) {
+        s = tp - 4;
+        e = tp - 1;
       }
-      if (start > 2) pages.push("...");
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (end < totalPages - 1) pages.push("...");
-      pages.push(totalPages);
+      if (s > 2) pages.push("...");
+      for (var j = s; j <= e; j++) pages.push(j);
+      if (e < tp - 1) pages.push("...");
+      pages.push(tp);
     }
     return pages;
   };
 
+  var handleExport = async function () {
+    try {
+      var res = await axios.get(API + "/history", {
+        params: {
+          page: 1,
+          limit: 999999,
+          device: deviceType,
+          sort: sortOrder,
+          search: search,
+          timeFrom: appliedTimeFrom,
+          timeTo: appliedTimeTo,
+        },
+      });
+      var csv = "\uFEFF" + "ID,Thiết bị,Hành động,Trạng thái,Thời gian\n";
+      res.data.data.forEach(function (r) {
+        var act = r.action === "ON" ? "Bật" : "Tắt";
+        var st =
+          r.status === "SUCCESS"
+            ? "Thành công"
+            : r.status === "FAILED"
+              ? "Thất bại"
+              : "Chờ";
+        csv +=
+          r.id +
+          "," +
+          r.device_name +
+          "," +
+          act +
+          "," +
+          st +
+          ',"' +
+          r.time_text +
+          '"\n';
+      });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(
+        new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+      );
+      a.download =
+        "action_history_" + new Date().toISOString().slice(0, 10) + ".csv";
+      a.click();
+    } catch (err) {
+      console.error("Export error:", err);
+    }
+  };
+
   return (
     <div className="history-page">
-      {/* HEADER + FILTERS */}
       <div className="page-header">
         <h2 className="page-title">📋 LỊCH SỬ THIẾT BỊ</h2>
         <div className="filters">
           <select
             className="filter-select"
             value={deviceType}
-            onChange={(e) => setDeviceType(e.target.value)}
+            onChange={function (e) {
+              setDeviceType(e.target.value);
+            }}
           >
             <option value="">Tất cả thiết bị</option>
             <option value="fire">Báo cháy</option>
@@ -132,14 +184,79 @@ function ActionHistory() {
             <option value="ac">Điều hòa</option>
           </select>
 
-          <select
-            className="filter-select"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-          >
-            <option value="desc">Mới nhất</option>
-            <option value="asc">Cũ nhất</option>
-          </select>
+          <div className="sort-time-wrapper">
+            <button
+              className="filter-btn"
+              onClick={function () {
+                setShowTimeFilter(!showTimeFilter);
+              }}
+            >
+              {sortOrder === "desc" ? "Mới nhất" : "Cũ nhất"}{" "}
+              {showTimeFilter ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+            {showTimeFilter && (
+              <div className="time-filter-dropdown">
+                <div className="tf-row">
+                  <label>Sắp xếp:</label>
+                  <select
+                    className="tf-select"
+                    value={sortOrder}
+                    onChange={function (e) {
+                      setSortOrder(e.target.value);
+                    }}
+                  >
+                    <option value="desc">Mới nhất</option>
+                    <option value="asc">Cũ nhất</option>
+                  </select>
+                </div>
+                <div className="tf-row">
+                  <label>Từ:</label>
+                  <input
+                    type="datetime-local"
+                    className="tf-input"
+                    value={timeFrom}
+                    onChange={function (e) {
+                      setTimeFrom(e.target.value);
+                    }}
+                  />
+                </div>
+                <div className="tf-row">
+                  <label>Đến:</label>
+                  <input
+                    type="datetime-local"
+                    className="tf-input"
+                    value={timeTo}
+                    onChange={function (e) {
+                      setTimeTo(e.target.value);
+                    }}
+                  />
+                </div>
+                <div className="tf-actions">
+                  <button
+                    className="tf-btn tf-apply"
+                    onClick={function () {
+                      setAppliedTimeFrom(timeFrom);
+                      setAppliedTimeTo(timeTo);
+                      setShowTimeFilter(false);
+                    }}
+                  >
+                    Áp dụng
+                  </button>
+                  <button
+                    className="tf-btn tf-clear"
+                    onClick={function () {
+                      setTimeFrom("");
+                      setTimeTo("");
+                      setAppliedTimeFrom("");
+                      setAppliedTimeTo("");
+                    }}
+                  >
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="search-box">
             <input
@@ -147,15 +264,23 @@ function ActionHistory() {
               className="search-input"
               placeholder="Tìm kiếm..."
               value={searchInput}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onChange={function (e) {
+                handleInputChange(e.target.value);
+              }}
+              onKeyDown={function (e) {
+                if (e.key === "Enter") setSearch(searchInput);
+              }}
             />
-            <FaSearch className="search-icon" onClick={handleSearch} />
+            <FaSearch
+              className="search-icon"
+              onClick={function () {
+                setSearch(searchInput);
+              }}
+            />
           </div>
         </div>
       </div>
 
-      {/* BẢNG DỮ LIỆU */}
       <div className="table-container">
         {loading ? (
           <div className="table-loading">
@@ -181,69 +306,87 @@ function ActionHistory() {
                   </td>
                 </tr>
               ) : (
-                data.map((row) => (
-                  <tr key={row.id}>
-                    <td className="td-id">#{row.id}</td>
-                    <td className="td-device">
-                      <span className="device-name-text">
-                        {row.device_name}
-                      </span>
-                    </td>
-                    <td className="td-action">
-                      <span
-                        className={`action-text ${row.action === "ON" ? "action-on" : "action-off"}`}
-                      >
-                        {row.action === "ON" ? "Bật" : "Tắt"}
-                      </span>
-                    </td>
-                    <td className="td-status">{getStatusBadge(row.status)}</td>
-                    <td className="td-time">{row.time_text}</td>
-                  </tr>
-                ))
+                data.map(function (row) {
+                  return (
+                    <tr key={row.id}>
+                      <td className="td-id">#{row.id}</td>
+                      <td className="td-device">
+                        <span className="device-name-text">
+                          {row.device_name}
+                        </span>
+                      </td>
+                      <td className="td-action">
+                        <span
+                          className={
+                            "action-text " +
+                            (row.action === "ON" ? "action-on" : "action-off")
+                          }
+                        >
+                          {row.action === "ON" ? "Bật" : "Tắt"}
+                        </span>
+                      </td>
+                      <td className="td-status">
+                        {getStatusBadge(row.status)}
+                      </td>
+                      <td className="td-time">{row.time_text}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         )}
       </div>
 
-      {/* PHÂN TRANG */}
-      {pagination.totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="page-btn"
-            disabled={pagination.page === 1}
-            onClick={() => fetchData(pagination.page - 1)}
-          >
-            ‹
-          </button>
-
-          {getPageNumbers().map((p, idx) =>
-            p === "..." ? (
-              <span key={`dot-${idx}`} className="page-dots">
-                ...
-              </span>
-            ) : (
-              <button
-                key={p}
-                className={`page-btn ${pagination.page === p ? "page-active" : ""}`}
-                onClick={() => fetchData(p)}
-              >
-                {p}
-              </button>
-            ),
-          )}
-
-          <button
-            className="page-btn"
-            disabled={pagination.page === pagination.totalPages}
-            onClick={() => fetchData(pagination.page + 1)}
-          >
-            ›
-          </button>
-
-          <span className="page-info">Tổng: {pagination.total} bản ghi</span>
-        </div>
-      )}
+      <div className="page-footer">
+        <button className="export-btn" onClick={handleExport}>
+          <FaFileExport /> Export Data
+        </button>
+        {pagination.totalPages > 1 && (
+          <div className="pagination">
+            <button
+              className="page-btn"
+              disabled={pagination.page === 1}
+              onClick={function () {
+                fetchData(pagination.page - 1);
+              }}
+            >
+              ‹
+            </button>
+            {getPageNumbers().map(function (p, idx) {
+              if (p === "...")
+                return (
+                  <span key={"d" + idx} className="page-dots">
+                    ...
+                  </span>
+                );
+              return (
+                <button
+                  key={p}
+                  className={
+                    "page-btn " + (pagination.page === p ? "page-active" : "")
+                  }
+                  onClick={function () {
+                    fetchData(p);
+                  }}
+                >
+                  {p}
+                </button>
+              );
+            })}
+            <button
+              className="page-btn"
+              disabled={pagination.page === pagination.totalPages}
+              onClick={function () {
+                fetchData(pagination.page + 1);
+              }}
+            >
+              ›
+            </button>
+            <span className="page-info">Tổng: {pagination.total} bản ghi</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
