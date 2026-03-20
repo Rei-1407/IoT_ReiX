@@ -106,6 +106,7 @@ mosquitto -c mosquitto.conf -v
 | Tài liệu | Link |
 |-----------|------|
 |-----------|------|
-| **Figma** | [Sẽ cập nhật] |
+| **Figma** | https://www.figma.com/design/BPzfNFCGqc96vAY7A6f4gq/IoT---SmartHome---GHL?node-id=31-504&t=RyoJqWOVg5OmH1l6-1 |
 | **API Docs** | http://localhost:5000/api-docs |
 | **GitHub** | https://github.com/Rei-1407/IoT_ReiX |
+| **Báo cáo** | https://drive.google.com/file/d/1IfH4jPFTF3VJgNCdiNQo_t3S1-BFlHS4/view?usp=sharing |
