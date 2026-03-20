@@ -41,7 +41,6 @@ var CustomLegend = function () {
       color: "#f59e0b",
     },
   ];
-
   return (
     <div className="custom-legend">
       {items.map(function (item, idx) {
@@ -85,16 +84,16 @@ function Dashboard(props) {
     } catch (err) {
       console.error("Control error:", err);
       setPendingDevices(function (prev) {
-        var updated = Object.assign({}, prev);
-        delete updated[deviceKey];
-        return updated;
+        var u = Object.assign({}, prev);
+        delete u[deviceKey];
+        return u;
       });
     }
     setTimeout(function () {
       setPendingDevices(function (prev) {
-        var updated = Object.assign({}, prev);
-        delete updated[deviceKey];
-        return updated;
+        var u = Object.assign({}, prev);
+        delete u[deviceKey];
+        return u;
       });
     }, 10000);
   };
@@ -111,25 +110,20 @@ function Dashboard(props) {
     }
   };
 
-  var toggleDevice = function (deviceKey) {
-    var current = deviceState[deviceKey];
-    var newValue = current.is_on ? 0 : 1;
-    sendControl(deviceKey, newValue);
+  var toggleDevice = function (dk) {
+    sendControl(dk, deviceState[dk].is_on ? 0 : 1);
   };
-
-  var setFanLevel = function (level) {
-    sendControl("fan", level);
+  var setFanLevel = function (l) {
+    sendControl("fan", l);
   };
-
-  var setAcMode = function (mode) {
-    var acMap = { OFF: 0, Sleep: 80, Dry: 150, Cool: 255 };
-    sendControl("ac", acMap[mode] || 0);
+  var setAcMode = function (m) {
+    var map = { OFF: 0, Sleep: 80, Dry: 150, Cool: 255 };
+    sendControl("ac", map[m] || 0);
   };
-
-  var getAcMode = function (level) {
-    if (level === 0) return "OFF";
-    if (level <= 80) return "Sleep";
-    if (level <= 150) return "Dry";
+  var getAcMode = function (l) {
+    if (l === 0) return "OFF";
+    if (l <= 80) return "Sleep";
+    if (l <= 150) return "Dry";
     return "Cool";
   };
 
@@ -249,7 +243,12 @@ function Dashboard(props) {
 
         <div className="control-panel">
           <div className="control-header">
-            <span className="control-title">CHẾ ĐỘ</span>
+            <div className="control-header-left">
+              <span className="control-title">CHẾ ĐỘ</span>
+              <span className="mode-sub">
+                {isAutoMode ? "Điều khiển tự động" : "Điều khiển thủ công"}
+              </span>
+            </div>
             <div className="mode-toggle" onClick={toggleMode}>
               <span
                 className={
@@ -265,7 +264,6 @@ function Dashboard(props) {
                 <div className="toggle-knob"></div>
               </div>
             </div>
-            <span className="mode-sub">Điều khiển thủ công</span>
           </div>
 
           <div
@@ -337,13 +335,13 @@ function Dashboard(props) {
 
           <div
             className={
-              "device-card " +
+              "device-card device-card-vertical " +
               (deviceState.fan.level > 0 ? "device-on device-fan-on" : "") +
               " " +
               (pendingDevices.fan ? "device-pending" : "")
             }
           >
-            <div className="device-left">
+            <div className="device-top-row">
               <FaFan
                 className={
                   "device-icon " +
@@ -357,18 +355,17 @@ function Dashboard(props) {
             {pendingDevices.fan ? (
               <div className="loading-spinner"></div>
             ) : (
-              <div className="level-buttons">
+              <div className="level-buttons-full">
                 {["OFF", "1", "2", "3"].map(function (label, idx) {
-                  var level = idx;
                   return (
                     <button
                       key={label}
                       className={
                         "level-btn " +
-                        (deviceState.fan.level === level ? "level-active" : "")
+                        (deviceState.fan.level === idx ? "level-active" : "")
                       }
                       onClick={function () {
-                        if (!isAutoMode) setFanLevel(level);
+                        if (!isAutoMode) setFanLevel(idx);
                       }}
                       disabled={isAutoMode}
                     >
@@ -382,13 +379,13 @@ function Dashboard(props) {
 
           <div
             className={
-              "device-card " +
+              "device-card device-card-vertical " +
               (deviceState.ac.level > 0 ? "device-on device-ac-on" : "") +
               " " +
               (pendingDevices.ac ? "device-pending" : "")
             }
           >
-            <div className="device-left">
+            <div className="device-top-row">
               <FaSnowflake
                 className={
                   "device-icon " +
@@ -402,7 +399,7 @@ function Dashboard(props) {
             {pendingDevices.ac ? (
               <div className="loading-spinner"></div>
             ) : (
-              <div className="level-buttons">
+              <div className="level-buttons-full">
                 {["OFF", "Sleep", "Dry", "Cool"].map(function (mode) {
                   return (
                     <button

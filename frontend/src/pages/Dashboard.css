@@ -1,4 +1,3 @@
-/* ===== DASHBOARD PAGE ===== */
 .dashboard-page {
   display: flex;
   flex-direction: column;
@@ -6,7 +5,7 @@
   gap: 16px;
 }
 
-/* ===== SENSOR CARDS (3 card trên cùng) ===== */
+/* ===== SENSOR CARDS ===== */
 .sensor-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -30,7 +29,6 @@
   display: flex;
   align-items: center;
 }
-
 .card-temp .sensor-icon {
   color: #ef4444;
 }
@@ -40,12 +38,10 @@
 .card-lux .sensor-icon {
   color: #f59e0b;
 }
-
 .sensor-info {
   display: flex;
   flex-direction: column;
 }
-
 .sensor-label {
   font-size: 13px;
   color: #666;
@@ -53,7 +49,6 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 .sensor-value {
   font-size: 28px;
   font-weight: 700;
@@ -61,10 +56,10 @@
   letter-spacing: -0.5px;
 }
 
-/* ===== DASHBOARD BODY (chart + control) ===== */
+/* ===== DASHBOARD BODY ===== */
 .dashboard-body {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 360px;
   gap: 16px;
   flex: 1;
   min-height: 0;
@@ -89,19 +84,16 @@
   margin-bottom: 12px;
   flex-shrink: 0;
 }
-
 .chart-title {
   font-size: 15px;
   font-weight: 700;
   color: #1a1a2e;
 }
-
 .chart-time {
   font-size: 13px;
   color: #ef4444;
   font-weight: 600;
 }
-
 .chart-wrapper {
   flex: 1;
   min-height: 0;
@@ -116,23 +108,32 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   overflow-y: auto;
 }
 
+/* Header — CHẾ ĐỘ bên trái, toggle bên phải */
 .control-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  gap: 4px;
   margin-bottom: 4px;
   flex-shrink: 0;
 }
 
+.control-header-left {
+  display: flex;
+  flex-direction: column;
+}
 .control-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: #1a1a2e;
+}
+.mode-sub {
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
 }
 
 .mode-toggle {
@@ -141,41 +142,33 @@
   gap: 8px;
   cursor: pointer;
 }
-
 .mode-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: #aaa;
-  transition: color 0.3s;
 }
-
-.mode-label.mode-active {
+.mode-active-manual {
   color: #f59e0b;
 }
-
-.mode-sub {
-  font-size: 11px;
-  color: #999;
+.mode-active-auto {
+  color: #22c55e;
 }
 
-/* Toggle Switch (Auto/Manual) */
+/* Toggle Switch */
 .toggle-switch {
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
   background: #ccc;
   position: relative;
   transition: background 0.3s;
   cursor: pointer;
 }
-
 .toggle-switch.toggle-on {
   background: linear-gradient(135deg, #4facfe, #43e97b);
 }
-
 .toggle-knob {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: white;
   position: absolute;
@@ -184,9 +177,8 @@
   transition: transform 0.3s;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
-
 .toggle-switch.toggle-on .toggle-knob {
-  transform: translateX(20px);
+  transform: translateX(22px);
 }
 
 /* ===== DEVICE CARD ===== */
@@ -194,8 +186,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.5);
   transition: all 0.3s;
   flex-shrink: 0;
@@ -204,7 +196,6 @@
 .device-card.device-on {
   background: rgba(255, 255, 255, 0.85);
 }
-
 .device-fire-on {
   border-left: 4px solid #ef4444;
 }
@@ -217,7 +208,6 @@
 .device-ac-on {
   border-left: 4px solid #06b6d4;
 }
-
 .device-card.device-pending {
   opacity: 0.7;
 }
@@ -225,38 +215,34 @@
 .device-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-shrink: 0;
 }
-
 .device-icon {
-  font-size: 16px;
+  font-size: 20px;
   color: #666;
 }
-
 .device-on .device-icon {
   color: #333;
 }
-
 .device-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #444;
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
   white-space: nowrap;
 }
 
-/* Small Toggle (fire, light) */
+/* Small Toggle */
 .toggle-switch-sm {
-  width: 48px;
-  height: 26px;
-  border-radius: 13px;
+  width: 54px;
+  height: 28px;
+  border-radius: 14px;
   background: #ddd;
   position: relative;
   cursor: pointer;
   transition: background 0.3s;
   flex-shrink: 0;
 }
-
 .toggle-sm-on {
   background: #ccc;
 }
@@ -266,10 +252,9 @@
 .toggle-light.toggle-sm-on {
   background: linear-gradient(135deg, #eab308, #fbbf24);
 }
-
 .toggle-knob-sm {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: white;
   position: absolute;
@@ -278,40 +263,37 @@
   transition: transform 0.3s;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
-
 .toggle-sm-on .toggle-knob-sm {
-  transform: translateX(22px);
+  transform: translateX(26px);
 }
 
-/* Level Buttons (fan, ac) */
+/* Level Buttons */
 .level-buttons {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
-
 .level-btn {
-  padding: 5px 10px;
+  padding: 6px 11px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #e5e7eb;
   color: #555;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  min-width: 38px;
+  text-align: center;
 }
-
 .level-btn:hover:not(:disabled) {
   background: #d1d5db;
 }
-
 .level-btn.level-active {
   background: linear-gradient(135deg, #4facfe, #43e97b);
   color: white;
 }
-
 .level-btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -327,19 +309,7 @@
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
 }
-
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ===== FAN SPINNING ===== */
-.fan-spinning {
-  animation: fan-rotate 1s linear infinite;
-}
-
-@keyframes fan-rotate {
   to {
     transform: rotate(360deg);
   }
@@ -348,10 +318,9 @@
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1200px) {
   .dashboard-body {
-    grid-template-columns: 1fr 280px;
+    grid-template-columns: 1fr 300px;
   }
 }
-
 @media (max-width: 900px) {
   .sensor-cards {
     grid-template-columns: 1fr;
@@ -369,25 +338,21 @@
   margin-top: 8px;
   flex-shrink: 0;
 }
-
 .legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-
 .legend-icon {
   font-size: 18px;
   display: flex;
   align-items: center;
 }
-
 .legend-line {
   width: 28px;
   height: 3px;
   border-radius: 2px;
 }
-
 .legend-text {
   font-size: 14px;
   font-weight: 700;
@@ -408,11 +373,9 @@
   animation: slideDown 0.3s ease;
   flex-shrink: 0;
 }
-
 .timeout-icon {
   font-size: 20px;
 }
-
 .timeout-close {
   margin-left: auto;
   background: none;
@@ -420,9 +383,7 @@
   color: #991b1b;
   font-size: 18px;
   cursor: pointer;
-  padding: 0 4px;
 }
-
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -434,26 +395,12 @@
   }
 }
 
-/* ===== MODE LABEL ===== */
-.mode-active-manual {
-  color: #f59e0b;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.mode-active-auto {
-  color: #22c55e;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-/* ===== FIRE ANIMATION — hiệu ứng cháy ===== */
+/* ===== FIRE ANIMATION ===== */
 .fire-active {
   color: #ef4444 !important;
   animation: fire-glow 0.5s ease-in-out infinite alternate;
   filter: drop-shadow(0 0 6px #ef4444);
 }
-
 @keyframes fire-glow {
   from {
     filter: drop-shadow(0 0 4px #ef4444) drop-shadow(0 0 8px #ff6b35);
@@ -466,12 +413,11 @@
   }
 }
 
-/* ===== LIGHT ANIMATION — vầng hào quang ===== */
+/* ===== LIGHT ANIMATION ===== */
 .light-active {
   color: #fbbf24 !important;
   animation: light-glow 1.5s ease-in-out infinite alternate;
 }
-
 @keyframes light-glow {
   from {
     filter: drop-shadow(0 0 4px #fbbf24);
@@ -484,50 +430,39 @@
   }
 }
 
-/* ===== FAN ANIMATION — quay theo cấp độ ===== */
+/* ===== FAN ANIMATION ===== */
 .fan-spin-1 {
   color: #3b82f6 !important;
   animation: fan-rotate 2s linear infinite;
 }
-
 .fan-spin-2 {
   color: #3b82f6 !important;
   animation: fan-rotate 1s linear infinite;
 }
-
 .fan-spin-3 {
   color: #3b82f6 !important;
   animation: fan-rotate 0.4s linear infinite;
 }
-
-/* Xóa class cũ nếu còn */
-.fan-spinning {
-  animation: fan-rotate 1s linear infinite;
-}
-
 @keyframes fan-rotate {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* ===== AC ANIMATION — rung theo chế độ ===== */
+/* ===== AC ANIMATION ===== */
 .ac-mode-sleep {
   color: #06b6d4 !important;
   animation: ac-vibrate-light 0.3s ease-in-out infinite;
 }
-
 .ac-mode-dry {
   color: #06b6d4 !important;
   animation: ac-vibrate-medium 0.2s ease-in-out infinite;
 }
-
 .ac-mode-cool {
   color: #06b6d4 !important;
   animation: ac-vibrate-strong 0.1s ease-in-out infinite;
   filter: drop-shadow(0 0 6px #06b6d4);
 }
-
 @keyframes ac-vibrate-light {
   0%,
   100% {
@@ -540,7 +475,6 @@
     transform: translateX(0.5px);
   }
 }
-
 @keyframes ac-vibrate-medium {
   0%,
   100% {
@@ -553,7 +487,6 @@
     transform: translateX(1px) rotate(2deg);
   }
 }
-
 @keyframes ac-vibrate-strong {
   0%,
   100% {
@@ -565,4 +498,29 @@
   75% {
     transform: translateX(2px) rotate(3deg);
   }
+}
+
+/* ===== DEVICE CARD VERTICAL (Quạt, Điều hòa) ===== */
+.device-card-vertical {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.device-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.level-buttons-full {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.level-buttons-full .level-btn {
+  flex: 1;
+  padding: 8px 0;
+  text-align: center;
 }
