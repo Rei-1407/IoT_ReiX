@@ -1,0 +1,11 @@
+$kind: http-request
+name: Lấy dữ liệu cảm biến
+url: http://localhost:5000/api/sensors?page=1&limit=10&type=&sort=desc&search=
+method: GET
+queryParams:
+  page: "1"
+  limit: "10"
+  type: ""
+  sort: desc
+  search: ""
+order: 1774003887076

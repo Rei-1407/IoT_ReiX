@@ -1,0 +1,5 @@
+$kind: http-request
+name: Health Check + ESP32 Status
+url: http://localhost:5000/api/health
+method: GET
+order: 4209334132926439

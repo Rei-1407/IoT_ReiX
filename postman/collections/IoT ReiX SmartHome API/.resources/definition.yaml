@@ -1,0 +1,4 @@
+$kind: collection
+name: IoT ReiX SmartHome API
+description: StartFragmentAPI Documentation cho hệ thống IoT SmartHome — Giám
+  sát cảm biến và điều khiển thiết bị qua MQTT + WebSocketEndFragment

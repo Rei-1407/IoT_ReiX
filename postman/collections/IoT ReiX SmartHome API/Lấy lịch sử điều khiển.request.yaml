@@ -1,0 +1,5 @@
+$kind: http-request
+name: Lấy lịch sử điều khiển
+url: ""
+method: GET
+order: 613488680180603

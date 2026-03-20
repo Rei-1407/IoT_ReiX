@@ -1,0 +1,14 @@
+$kind: http-request
+name: Gửi lệnh điều khiển
+url: http://localhost:5000/api/devices/control
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"device_key\": \"fan\",\r
+
+    \  \"value\": 2\r
+
+    }"
+order: 4136098391357693

@@ -1,0 +1,5 @@
+$kind: http-request
+name: Lấy trạng thái thiết bị
+url: ""
+method: GET
+order: 3768402167853994
