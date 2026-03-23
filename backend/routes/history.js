@@ -157,6 +157,8 @@ router.get("/", async (req, res) => {
         whereClause +
         " ORDER BY dh.created_ts_ms " +
         (sortOrder === "asc" ? "ASC" : "DESC") +
+        ", dh.id " +
+        (sortOrder === "asc" ? "ASC" : "DESC") +
         " LIMIT " +
         limit +
         " OFFSET " +

@@ -117,6 +117,8 @@ router.get("/", async (req, res) => {
         whereClause +
         " ORDER BY sr.ts_ms " +
         (sortOrder === "asc" ? "ASC" : "DESC") +
+        ", sr.id " +
+        (sortOrder === "asc" ? "ASC" : "DESC") +
         " LIMIT " +
         limit +
         " OFFSET " +
