@@ -71,15 +71,41 @@ mqttClient.on("message", async (topic, payload) => {
       broadcast("esp32_status", { online: true });
     }
     const now = Date.now();
-    const timeText = new Date().toLocaleString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour12: false,
-    });
+    const now2 = new Date();
+    const dd = String(now2.getDate()).padStart(2, "0");
+    const mm = String(now2.getMonth() + 1).padStart(2, "0");
+    const yyyy = now2.getFullYear();
+    const hh = String(now2.getHours()).padStart(2, "0");
+    const mi = String(now2.getMinutes()).padStart(2, "0");
+    const ss = String(now2.getSeconds()).padStart(2, "0");
+    const timeText =
+      dd + "/" + mm + "/" + yyyy + " " + hh + ":" + mi + ":" + ss;
+
+    // ===== TOPIC: restore =====
+    // ESP32 gửi: { request: "restore" } sau khi boot + subscribe xong
+    // Backend đọc device_state từ DB → gửi lại từng lệnh control
+    if (topic === "restore") {
+      console.log("🔄 ESP32 yêu cầu khôi phục trạng thái từ DB...");
+      try {
+        const [rows] = await db.execute(
+          "SELECT d.device_key, ds.is_on, ds.level FROM devices d JOIN device_state ds ON d.id = ds.device_id",
+        );
+        for (const row of rows) {
+          const val =
+            row.device_key === "fan"
+              ? row.level
+              : row.device_key === "ac"
+                ? row.level
+                : row.is_on;
+          const msg = JSON.stringify({ action: row.device_key, val: val });
+          mqttClient.publish("control", msg);
+        }
+        console.log("✅ Đã gửi trạng thái từ DB xuống ESP32");
+      } catch (err) {
+        console.error("❌ Restore device state error:", err.message);
+      }
+      return;
+    }
 
     // ===== TOPIC: sensor =====
     // ESP32 gửi: { temp: 22.92, hum: 58.57, lux: 355.83 }
@@ -185,9 +211,6 @@ mqttClient.on("message", async (topic, payload) => {
 // ESP32 ONLINE/OFFLINE DETECTION
 // Nếu > 6 giây không nhận MQTT message → offline
 // ============================================
-// Cập nhật mỗi khi nhận MQTT message (đã có trong handler ở trên)
-// Ta cần thêm vào đầu handler
-
 // Check mỗi 3 giây
 setInterval(() => {
   const now = Date.now();
@@ -253,7 +276,7 @@ const swaggerOptions = {
             sensor_key: { type: "string", example: "temperature" },
             unit: { type: "string", example: "°C" },
             value_num: { type: "number", example: 22.92 },
-            time_text: { type: "string", example: "16:37:22 01/02/2026" },
+            time_text: { type: "string", example: "01/02/2026 16:37:22" },
             created_at: { type: "string", format: "date-time" },
           },
         },
@@ -280,7 +303,7 @@ const swaggerOptions = {
               enum: ["PENDING", "SUCCESS", "FAILED"],
               example: "SUCCESS",
             },
-            time_text: { type: "string", example: "16:37:22 01/02/2026" },
+            time_text: { type: "string", example: "01/02/2026 16:37:22" },
             created_at: { type: "string", format: "date-time" },
           },
         },

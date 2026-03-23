@@ -15,6 +15,7 @@ const char* topic_control = "control";
 const char* topic_device  = "device";
 const char* topic_sensor  = "sensor";
 const char* topic_status  = "status";
+const char* topic_restore = "restore";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -32,7 +33,7 @@ const int LED_FAN3  = 4;
 #define ADDR_BH1750 0x23
 
 // ===== STATE =====
-bool  isAutoMode = true;
+bool  isAutoMode = false;
 float temp = 0.0f, hum = 0.0f, lux = 0.0f;
 bool effect1Running = false;
 bool effect2Running = false;
@@ -294,7 +295,16 @@ void reconnect() {
 
     if (client.connect(clientId.c_str(), "gianghoanglong", "14072004")) {
       client.subscribe(topic_control);
-    } 
+
+      // Sau khi subscribe xong, yêu cầu Backend gửi trạng thái từ DB
+      delay(500);
+      StaticJsonDocument<64> doc;
+      doc["request"] = "restore";
+      char buf[64];
+      size_t n = serializeJson(doc, buf);
+      client.publish(topic_restore, buf, n);
+      Serial.println("📡 Sent restore request to Backend");
+    }
     else {
       delay(1500);
     }

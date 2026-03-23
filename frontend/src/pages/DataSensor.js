@@ -6,8 +6,6 @@ import {
   FaTint,
   FaSun,
   FaFileExport,
-  FaChevronDown,
-  FaChevronUp,
 } from "react-icons/fa";
 import "./DataSensor.css";
 
@@ -28,12 +26,6 @@ function DataSensor() {
   var [firstLoad, setFirstLoad] = useState(true);
   var searchTimer = React.useRef(null);
 
-  var [showTimeFilter, setShowTimeFilter] = useState(false);
-  var [timeFrom, setTimeFrom] = useState("");
-  var [timeTo, setTimeTo] = useState("");
-  var [appliedTimeFrom, setAppliedTimeFrom] = useState("");
-  var [appliedTimeTo, setAppliedTimeTo] = useState("");
-
   var getPageLimit = function () {
     return Math.max(5, Math.floor((window.innerHeight - 220) / 45));
   };
@@ -50,8 +42,6 @@ function DataSensor() {
             type: sensorType,
             sort: sortOrder,
             search: search,
-            timeFrom: appliedTimeFrom,
-            timeTo: appliedTimeTo,
           },
         });
         setData(res.data.data);
@@ -62,15 +52,7 @@ function DataSensor() {
       setLoading(false);
       setFirstLoad(false);
     },
-    [
-      sensorType,
-      sortOrder,
-      search,
-      limit,
-      appliedTimeFrom,
-      appliedTimeTo,
-      firstLoad,
-    ],
+    [sensorType, sortOrder, search, limit, firstLoad],
   );
 
   useEffect(
@@ -130,8 +112,6 @@ function DataSensor() {
           type: sensorType,
           sort: sortOrder,
           search: search,
-          timeFrom: appliedTimeFrom,
-          timeTo: appliedTimeTo,
         },
       });
       var csv = "\uFEFF" + "ID,Cảm biến,Giá trị,Đơn vị,Thời gian\n";
@@ -159,19 +139,6 @@ function DataSensor() {
     }
   };
 
-  var applyTime = function () {
-    setAppliedTimeFrom(timeFrom);
-    setAppliedTimeTo(timeTo);
-    setShowTimeFilter(false);
-  };
-
-  var clearTime = function () {
-    setTimeFrom("");
-    setTimeTo("");
-    setAppliedTimeFrom("");
-    setAppliedTimeTo("");
-  };
-
   return (
     <div className="datasensor-page">
       <div className="page-header">
@@ -190,64 +157,14 @@ function DataSensor() {
             <option value="light">Ánh sáng</option>
           </select>
 
-          <div className="sort-time-wrapper">
-            <button
-              className="filter-btn"
-              onClick={function () {
-                setShowTimeFilter(!showTimeFilter);
-              }}
-            >
-              {sortOrder === "desc" ? "Mới nhất" : "Cũ nhất"}{" "}
-              {showTimeFilter ? <FaChevronUp /> : <FaChevronDown />}
-            </button>
-            {showTimeFilter && (
-              <div className="time-filter-dropdown">
-                <div className="tf-row">
-                  <label>Sắp xếp:</label>
-                  <select
-                    className="tf-select"
-                    value={sortOrder}
-                    onChange={function (e) {
-                      setSortOrder(e.target.value);
-                    }}
-                  >
-                    <option value="desc">Mới nhất</option>
-                    <option value="asc">Cũ nhất</option>
-                  </select>
-                </div>
-                <div className="tf-row">
-                  <label>Từ:</label>
-                  <input
-                    type="datetime-local"
-                    className="tf-input"
-                    value={timeFrom}
-                    onChange={function (e) {
-                      setTimeFrom(e.target.value);
-                    }}
-                  />
-                </div>
-                <div className="tf-row">
-                  <label>Đến:</label>
-                  <input
-                    type="datetime-local"
-                    className="tf-input"
-                    value={timeTo}
-                    onChange={function (e) {
-                      setTimeTo(e.target.value);
-                    }}
-                  />
-                </div>
-                <div className="tf-actions">
-                  <button className="tf-btn tf-apply" onClick={applyTime}>
-                    Áp dụng
-                  </button>
-                  <button className="tf-btn tf-clear" onClick={clearTime}>
-                    Xóa
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <button
+            className="filter-btn"
+            onClick={function () {
+              setSortOrder(sortOrder === "desc" ? "asc" : "desc");
+            }}
+          >
+            {sortOrder === "desc" ? "Mới nhất" : "Cũ nhất"}
+          </button>
 
           <div className="search-box">
             <input

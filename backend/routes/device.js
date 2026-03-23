@@ -57,15 +57,15 @@ module.exports = function (broadcast) {
       const prevOn = states[0]?.is_on || 0;
 
       const now = Date.now();
-      const timeText = new Date().toLocaleString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour12: false,
-      });
+      const now2 = new Date();
+      const dd = String(now2.getDate()).padStart(2, "0");
+      const mm = String(now2.getMonth() + 1).padStart(2, "0");
+      const yyyy = now2.getFullYear();
+      const hh = String(now2.getHours()).padStart(2, "0");
+      const mi = String(now2.getMinutes()).padStart(2, "0");
+      const ss = String(now2.getSeconds()).padStart(2, "0");
+      const timeText =
+        dd + "/" + mm + "/" + yyyy + " " + hh + ":" + mi + ":" + ss;
 
       const expectedOn = Number(value) > 0 ? 1 : 0;
       const action = expectedOn ? "ON" : "OFF";
