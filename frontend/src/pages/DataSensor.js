@@ -110,7 +110,7 @@ function DataSensor() {
           search: search,
         },
       });
-      var csv = "\uFEFF" + "ID,Cảm biến,Giá trị,Đơn vị,Thời gian\n";
+      var csv = "\uFEFFID,Cảm biến,Giá trị,Đơn vị,Thời gian\n";
       res.data.data.forEach(function (r) {
         csv +=
           r.id +

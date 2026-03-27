@@ -120,7 +120,7 @@ function ActionHistory() {
           search: search,
         },
       });
-      var csv = "\uFEFF" + "ID,Thiết bị,Hành động,Trạng thái,Thời gian\n";
+      var csv = "\uFEFFID,Thiết bị,Hành động,Trạng thái,Thời gian\n";
       res.data.data.forEach(function (r) {
         var act = r.action === "ON" ? "Bật" : "Tắt";
         var st =
