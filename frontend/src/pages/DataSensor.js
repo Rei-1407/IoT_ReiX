@@ -20,16 +20,12 @@ function DataSensor() {
   });
   var [sensorType, setSensorType] = useState("");
   var [sortOrder, setSortOrder] = useState("desc");
+  var [limit, setLimit] = useState(10);
   var [search, setSearch] = useState("");
   var [searchInput, setSearchInput] = useState("");
   var [loading, setLoading] = useState(true);
   var [firstLoad, setFirstLoad] = useState(true);
   var searchTimer = React.useRef(null);
-
-  var getPageLimit = function () {
-    return Math.max(5, Math.floor((window.innerHeight - 220) / 45));
-  };
-  var [limit] = useState(getPageLimit());
 
   var fetchData = useCallback(
     async function (page) {
@@ -157,20 +153,35 @@ function DataSensor() {
             <option value="light">Ánh sáng</option>
           </select>
 
-          <button
-            className="filter-btn"
-            onClick={function () {
-              setSortOrder(sortOrder === "desc" ? "asc" : "desc");
+          <select
+            className="filter-select"
+            value={sortOrder}
+            onChange={function (e) {
+              setSortOrder(e.target.value);
             }}
           >
-            {sortOrder === "desc" ? "Mới nhất" : "Cũ nhất"}
-          </button>
+            <option value="desc">Mới nhất</option>
+            <option value="asc">Cũ nhất</option>
+          </select>
+
+          <select
+            className="filter-select"
+            value={limit}
+            onChange={function (e) {
+              setLimit(Number(e.target.value));
+            }}
+          >
+            <option value={10}>10 dòng</option>
+            <option value={20}>20 dòng</option>
+            <option value={30}>30 dòng</option>
+            <option value={40}>40 dòng</option>
+          </select>
 
           <div className="search-box">
             <input
               type="text"
               className="search-input"
-              placeholder="Tìm kiếm..."
+              placeholder="Tìm theo thời gian..."
               value={searchInput}
               onChange={function (e) {
                 handleInputChange(e.target.value);

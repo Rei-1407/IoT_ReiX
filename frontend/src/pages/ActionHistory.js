@@ -13,17 +13,15 @@ function ActionHistory() {
     total: 0,
   });
   var [deviceType, setDeviceType] = useState("");
+  var [actionFilter, setActionFilter] = useState("");
+  var [statusFilter, setStatusFilter] = useState("");
   var [sortOrder, setSortOrder] = useState("desc");
+  var [limit, setLimit] = useState(10);
   var [search, setSearch] = useState("");
   var [searchInput, setSearchInput] = useState("");
   var [loading, setLoading] = useState(true);
   var [firstLoad, setFirstLoad] = useState(true);
   var searchTimer = React.useRef(null);
-
-  var getPageLimit = function () {
-    return Math.max(5, Math.floor((window.innerHeight - 220) / 45));
-  };
-  var [limit] = useState(getPageLimit());
 
   var fetchData = useCallback(
     async function (page) {
@@ -34,6 +32,8 @@ function ActionHistory() {
             page: page || 1,
             limit: limit,
             device: deviceType,
+            action: actionFilter,
+            status: statusFilter,
             sort: sortOrder,
             search: search,
           },
@@ -46,7 +46,15 @@ function ActionHistory() {
       setLoading(false);
       setFirstLoad(false);
     },
-    [deviceType, sortOrder, search, limit, firstLoad],
+    [
+      deviceType,
+      actionFilter,
+      statusFilter,
+      sortOrder,
+      search,
+      limit,
+      firstLoad,
+    ],
   );
 
   useEffect(
@@ -106,6 +114,8 @@ function ActionHistory() {
           page: 1,
           limit: 999999,
           device: deviceType,
+          action: actionFilter,
+          status: statusFilter,
           sort: sortOrder,
           search: search,
         },
@@ -162,20 +172,60 @@ function ActionHistory() {
             <option value="ac">Điều hòa</option>
           </select>
 
-          <button
-            className="filter-btn"
-            onClick={function () {
-              setSortOrder(sortOrder === "desc" ? "asc" : "desc");
+          <select
+            className="filter-select"
+            value={actionFilter}
+            onChange={function (e) {
+              setActionFilter(e.target.value);
             }}
           >
-            {sortOrder === "desc" ? "Mới nhất" : "Cũ nhất"}
-          </button>
+            <option value="">Tất cả hành động</option>
+            <option value="ON">Bật</option>
+            <option value="OFF">Tắt</option>
+          </select>
+
+          <select
+            className="filter-select"
+            value={statusFilter}
+            onChange={function (e) {
+              setStatusFilter(e.target.value);
+            }}
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="PENDING">Chờ</option>
+            <option value="SUCCESS">Thành công</option>
+            <option value="FAILED">Thất bại</option>
+          </select>
+
+          <select
+            className="filter-select"
+            value={sortOrder}
+            onChange={function (e) {
+              setSortOrder(e.target.value);
+            }}
+          >
+            <option value="desc">Mới nhất</option>
+            <option value="asc">Cũ nhất</option>
+          </select>
+
+          <select
+            className="filter-select"
+            value={limit}
+            onChange={function (e) {
+              setLimit(Number(e.target.value));
+            }}
+          >
+            <option value={10}>10 dòng</option>
+            <option value={20}>20 dòng</option>
+            <option value={30}>30 dòng</option>
+            <option value={40}>40 dòng</option>
+          </select>
 
           <div className="search-box">
             <input
               type="text"
               className="search-input"
-              placeholder="Tìm kiếm..."
+              placeholder="Tìm theo thời gian..."
               value={searchInput}
               onChange={function (e) {
                 handleInputChange(e.target.value);

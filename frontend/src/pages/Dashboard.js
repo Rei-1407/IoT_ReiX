@@ -61,6 +61,31 @@ var CustomLegend = function () {
   );
 };
 
+// Hàm tính class hiệu ứng cho nhiệt độ
+var getTempLevel = function (temp) {
+  if (temp >= 40) return "temp-extreme";
+  if (temp >= 33) return "temp-hot";
+  if (temp >= 28) return "temp-warm";
+  if (temp >= 20) return "temp-normal";
+  return "temp-cold";
+};
+
+// Hàm tính class hiệu ứng cho độ ẩm
+var getHumLevel = function (hum) {
+  if (hum >= 85) return "hum-extreme";
+  if (hum >= 70) return "hum-high";
+  if (hum >= 50) return "hum-normal";
+  return "hum-dry";
+};
+
+// Hàm tính class hiệu ứng cho ánh sáng
+var getLuxLevel = function (lux) {
+  if (lux >= 500) return "lux-bright";
+  if (lux >= 200) return "lux-normal";
+  if (lux >= 50) return "lux-dim";
+  return "lux-dark";
+};
+
 function Dashboard(props) {
   var sensorData = props.sensorData;
   var chartData = props.chartData;
@@ -127,6 +152,10 @@ function Dashboard(props) {
     return "Cool";
   };
 
+  var tempLevel = getTempLevel(sensorData.temp);
+  var humLevel = getHumLevel(sensorData.hum);
+  var luxLevel = getLuxLevel(sensorData.lux);
+
   return (
     <div className="dashboard-page">
       {timeoutError && (
@@ -148,8 +177,8 @@ function Dashboard(props) {
       )}
 
       <div className="sensor-cards">
-        <div className="sensor-card card-temp">
-          <div className="sensor-icon">
+        <div className={"sensor-card card-temp " + tempLevel}>
+          <div className={"sensor-icon temp-icon " + tempLevel}>
             <FaThermometerHalf />
           </div>
           <div className="sensor-info">
@@ -159,18 +188,28 @@ function Dashboard(props) {
             </span>
           </div>
         </div>
-        <div className="sensor-card card-hum">
-          <div className="sensor-icon">
+
+        <div className={"sensor-card card-hum " + humLevel}>
+          <div className={"sensor-icon hum-icon " + humLevel}>
             <FaTint />
+            {sensorData.hum >= 70 && (
+              <div className="hum-drops">
+                <span className="drop drop-1"></span>
+                <span className="drop drop-2"></span>
+                <span className="drop drop-3"></span>
+              </div>
+            )}
           </div>
           <div className="sensor-info">
             <span className="sensor-label">ĐỘ ẨM</span>
             <span className="sensor-value">{sensorData.hum.toFixed(2)} %</span>
           </div>
         </div>
-        <div className="sensor-card card-lux">
-          <div className="sensor-icon">
+
+        <div className={"sensor-card card-lux " + luxLevel}>
+          <div className={"sensor-icon lux-icon " + luxLevel}>
             <FaSun />
+            {sensorData.lux >= 200 && <div className="lux-rays"></div>}
           </div>
           <div className="sensor-info">
             <span className="sensor-label">ÁNH SÁNG</span>

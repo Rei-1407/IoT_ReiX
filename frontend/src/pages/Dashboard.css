@@ -22,22 +22,19 @@
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  transition: all 0.5s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .sensor-icon {
   font-size: 38px;
   display: flex;
   align-items: center;
+  position: relative;
+  transition: all 0.5s ease;
 }
-.card-temp .sensor-icon {
-  color: #ef4444;
-}
-.card-hum .sensor-icon {
-  color: #3b82f6;
-}
-.card-lux .sensor-icon {
-  color: #f59e0b;
-}
+
 .sensor-info {
   display: flex;
   flex-direction: column;
@@ -54,6 +51,384 @@
   font-weight: 700;
   color: #1a1a2e;
   letter-spacing: -0.5px;
+  transition: color 0.5s ease;
+}
+
+/* ============================================================
+   NHIỆT ĐỘ — màu icon + background + rung theo mức nhiệt
+   ============================================================ */
+.card-temp .sensor-icon {
+  color: #ef4444;
+}
+
+/* Lạnh < 20°C — xanh dương */
+.card-temp.temp-cold {
+  border-left: 4px solid #3b82f6;
+}
+.card-temp.temp-cold .sensor-icon {
+  color: #3b82f6;
+}
+.card-temp.temp-cold .sensor-value {
+  color: #1e40af;
+}
+
+/* Bình thường 20-28°C — xanh lá */
+.card-temp.temp-normal {
+  border-left: 4px solid #22c55e;
+}
+.card-temp.temp-normal .sensor-icon {
+  color: #22c55e;
+}
+
+/* Ấm 28-33°C — cam */
+.card-temp.temp-warm {
+  border-left: 4px solid #f59e0b;
+}
+.card-temp.temp-warm .sensor-icon {
+  color: #f59e0b;
+}
+.card-temp.temp-warm .sensor-value {
+  color: #b45309;
+}
+.card-temp.temp-warm {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.7),
+    rgba(254, 215, 170, 0.3)
+  );
+}
+
+/* Nóng 33-40°C — đỏ + rung nhẹ */
+.card-temp.temp-hot {
+  border-left: 4px solid #ef4444;
+}
+.card-temp.temp-hot .sensor-icon {
+  color: #ef4444;
+  animation: temp-pulse 1s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.5));
+}
+.card-temp.temp-hot .sensor-value {
+  color: #dc2626;
+}
+.card-temp.temp-hot {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.7),
+    rgba(254, 202, 202, 0.4)
+  );
+}
+
+/* Cực nóng >= 40°C — đỏ đậm + rung mạnh + nhấp nháy */
+.card-temp.temp-extreme {
+  border-left: 4px solid #b91c1c;
+}
+.card-temp.temp-extreme .sensor-icon {
+  color: #b91c1c;
+  animation: temp-shake 0.3s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(185, 28, 28, 0.7));
+}
+.card-temp.temp-extreme .sensor-value {
+  color: #991b1b;
+  animation: temp-blink 0.8s ease-in-out infinite alternate;
+}
+.card-temp.temp-extreme {
+  background: linear-gradient(
+    135deg,
+    rgba(254, 202, 202, 0.6),
+    rgba(252, 165, 165, 0.4)
+  );
+  box-shadow: 0 2px 20px rgba(239, 68, 68, 0.3);
+}
+
+@keyframes temp-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7));
+  }
+}
+@keyframes temp-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px) rotate(-3deg);
+  }
+  75% {
+    transform: translateX(2px) rotate(3deg);
+  }
+}
+@keyframes temp-blink {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+
+/* ============================================================
+   ĐỘ ẨM — giọt nước mồ hôi chảy khi ẩm cao
+   ============================================================ */
+.card-hum .sensor-icon {
+  color: #3b82f6;
+}
+
+/* Khô < 50% */
+.card-hum.hum-dry {
+  border-left: 4px solid #94a3b8;
+}
+.card-hum.hum-dry .sensor-icon {
+  color: #94a3b8;
+}
+
+/* Bình thường 50-70% */
+.card-hum.hum-normal {
+  border-left: 4px solid #3b82f6;
+}
+.card-hum.hum-normal .sensor-icon {
+  color: #3b82f6;
+}
+
+/* Ẩm cao 70-85% — giọt nước nhỏ */
+.card-hum.hum-high {
+  border-left: 4px solid #2563eb;
+}
+.card-hum.hum-high .sensor-icon {
+  color: #2563eb;
+  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.4));
+}
+.card-hum.hum-high {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.7),
+    rgba(191, 219, 254, 0.3)
+  );
+}
+
+/* Cực ẩm >= 85% — giọt nước lớn + nhiều */
+.card-hum.hum-extreme {
+  border-left: 4px solid #1d4ed8;
+}
+.card-hum.hum-extreme .sensor-icon {
+  color: #1d4ed8;
+  animation: hum-wobble 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(29, 78, 216, 0.5));
+}
+.card-hum.hum-extreme {
+  background: linear-gradient(
+    135deg,
+    rgba(219, 234, 254, 0.6),
+    rgba(191, 219, 254, 0.4)
+  );
+  box-shadow: 0 2px 20px rgba(59, 130, 246, 0.2);
+}
+.card-hum.hum-extreme .sensor-value {
+  color: #1e40af;
+}
+
+@keyframes hum-wobble {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+}
+
+/* Giọt nước mồ hôi */
+.hum-drops {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.drop {
+  position: absolute;
+  width: 5px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  opacity: 0;
+  animation: drop-fall 2s ease-in infinite;
+}
+.drop-1 {
+  left: 30%;
+  animation-delay: 0s;
+}
+.drop-2 {
+  left: 55%;
+  animation-delay: 0.6s;
+}
+.drop-3 {
+  left: 80%;
+  animation-delay: 1.2s;
+}
+
+.hum-extreme .drop {
+  width: 6px;
+  height: 10px;
+  background: #2563eb;
+}
+
+@keyframes drop-fall {
+  0% {
+    top: 10%;
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  20% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/* ============================================================
+   ÁNH SÁNG — tỏa sáng khi chói, mờ khi tối
+   ============================================================ */
+.card-lux .sensor-icon {
+  color: #f59e0b;
+}
+
+/* Tối < 50 lux — mờ, xám */
+.card-lux.lux-dark {
+  border-left: 4px solid #6b7280;
+}
+.card-lux.lux-dark .sensor-icon {
+  color: #9ca3af;
+  opacity: 0.5;
+}
+.card-lux.lux-dark {
+  background: linear-gradient(
+    135deg,
+    rgba(229, 231, 235, 0.6),
+    rgba(209, 213, 219, 0.3)
+  );
+}
+.card-lux.lux-dark .sensor-value {
+  color: #6b7280;
+}
+
+/* Mờ 50-200 lux — bình thường */
+.card-lux.lux-dim {
+  border-left: 4px solid #d97706;
+}
+.card-lux.lux-dim .sensor-icon {
+  color: #d97706;
+  opacity: 0.75;
+}
+
+/* Sáng 200-500 lux — phát sáng nhẹ */
+.card-lux.lux-normal {
+  border-left: 4px solid #f59e0b;
+}
+.card-lux.lux-normal .sensor-icon {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.5));
+  animation: lux-glow-soft 2s ease-in-out infinite alternate;
+}
+.card-lux.lux-normal {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.7),
+    rgba(254, 243, 199, 0.3)
+  );
+}
+
+/* Chói >= 500 lux — hào quang mạnh */
+.card-lux.lux-bright {
+  border-left: 4px solid #eab308;
+}
+.card-lux.lux-bright .sensor-icon {
+  color: #eab308;
+  animation: lux-glow-strong 1s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 12px rgba(234, 179, 8, 0.7));
+}
+.card-lux.lux-bright {
+  background: linear-gradient(
+    135deg,
+    rgba(254, 249, 195, 0.5),
+    rgba(253, 224, 71, 0.25)
+  );
+  box-shadow: 0 2px 20px rgba(234, 179, 8, 0.25);
+}
+.card-lux.lux-bright .sensor-value {
+  color: #a16207;
+}
+
+/* Tia sáng tỏa ra */
+.lux-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(251, 191, 36, 0.3) 0%,
+    transparent 70%
+  );
+  animation: rays-pulse 1.5s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.lux-bright .lux-rays {
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(
+    circle,
+    rgba(251, 191, 36, 0.5) 0%,
+    rgba(253, 224, 71, 0.2) 50%,
+    transparent 70%
+  );
+}
+
+@keyframes lux-glow-soft {
+  from {
+    filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.3));
+    transform: scale(1);
+  }
+  to {
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+    transform: scale(1.05);
+  }
+}
+@keyframes lux-glow-strong {
+  from {
+    filter: drop-shadow(0 0 8px rgba(234, 179, 8, 0.5));
+    transform: scale(1);
+  }
+  to {
+    filter: drop-shadow(0 0 16px rgba(234, 179, 8, 0.8))
+      drop-shadow(0 0 24px rgba(253, 224, 71, 0.4));
+    transform: scale(1.12);
+  }
+}
+@keyframes rays-pulse {
+  from {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
 }
 
 /* ===== DASHBOARD BODY ===== */
@@ -112,7 +487,7 @@
   overflow-y: auto;
 }
 
-/* Header — CHẾ ĐỘ bên trái, toggle bên phải */
+/* Header */
 .control-header {
   display: flex;
   justify-content: space-between;
@@ -500,7 +875,7 @@
   }
 }
 
-/* ===== DEVICE CARD VERTICAL (Quạt, Điều hòa) ===== */
+/* ===== DEVICE CARD VERTICAL ===== */
 .device-card-vertical {
   flex-direction: column;
   align-items: flex-start;

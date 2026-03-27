@@ -1,60 +1,6 @@
 const router = require("express").Router();
 const db = require("../config/db");
 
-function removeAccents(str) {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase()
-    .trim();
-}
-
-function getSensorExtras(search) {
-  var input = removeAccents(search);
-  var extras = [];
-  var sensorMap = [
-    {
-      keywords: [
-        "nhiet do",
-        "nhiệt độ",
-        "nhiet",
-        "nhiệt",
-        "temperature",
-        "temp",
-      ],
-      value: "Nhiệt độ",
-    },
-    {
-      keywords: ["do am", "độ ẩm", "am", "ẩm", "humidity", "hum"],
-      value: "Độ ẩm",
-    },
-    {
-      keywords: [
-        "anh sang",
-        "ánh sáng",
-        "anh",
-        "ánh",
-        "sang",
-        "sáng",
-        "light",
-        "lux",
-      ],
-      value: "Ánh sáng",
-    },
-  ];
-  sensorMap.forEach(function (item) {
-    item.keywords.forEach(function (kw) {
-      var kwClean = removeAccents(kw);
-      if (kwClean.startsWith(input) || input.startsWith(kwClean)) {
-        if (extras.indexOf(item.value) === -1) extras.push(item.value);
-      }
-    });
-  });
-  return extras;
-}
-
 router.get("/", async (req, res) => {
   try {
     var page = parseInt(req.query.page) || 1;
@@ -63,8 +9,6 @@ router.get("/", async (req, res) => {
     var search = req.query.search || "";
     var sensorType = req.query.type || "";
     var sortOrder = req.query.sort || "desc";
-    var timeFrom = req.query.timeFrom || "";
-    var timeTo = req.query.timeTo || "";
 
     var whereClause = "WHERE 1=1";
     var params = [];
@@ -74,34 +18,10 @@ router.get("/", async (req, res) => {
       params.push(sensorType);
     }
 
+    // Tìm kiếm chỉ theo thời gian
     if (search) {
-      var s = "%" + search + "%";
-      var conditions = [];
-      var searchParams = [];
-      conditions.push("CAST(sr.id AS CHAR) LIKE ?");
-      searchParams.push(s);
-      conditions.push("s.sensor_name LIKE ?");
-      searchParams.push(s);
-      conditions.push("CAST(sr.value_num AS CHAR) LIKE ?");
-      searchParams.push(s);
-      conditions.push("sr.time_text LIKE ?");
-      searchParams.push(s);
-      var extras = getSensorExtras(search);
-      extras.forEach(function (name) {
-        conditions.push("s.sensor_name = ?");
-        searchParams.push(name);
-      });
-      whereClause += " AND (" + conditions.join(" OR ") + ")";
-      params.push.apply(params, searchParams);
-    }
-
-    if (timeFrom) {
-      whereClause += " AND sr.ts_ms >= ?";
-      params.push(new Date(timeFrom).getTime());
-    }
-    if (timeTo) {
-      whereClause += " AND sr.ts_ms <= ?";
-      params.push(new Date(timeTo).getTime());
+      whereClause += " AND sr.time_text LIKE ?";
+      params.push("%" + search + "%");
     }
 
     var [countResult] = await db.execute(

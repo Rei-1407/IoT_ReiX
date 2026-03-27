@@ -1,93 +1,6 @@
 const router = require("express").Router();
 const db = require("../config/db");
 
-function removeAccents(str) {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase()
-    .trim();
-}
-
-function getSearchExtras(search) {
-  var input = removeAccents(search);
-  var extras = [];
-  var actionMap = [
-    { keywords: ["bat", "bật"], value: "ON" },
-    { keywords: ["tat", "tắt"], value: "OFF" },
-  ];
-  var statusMap = [
-    {
-      keywords: ["cho", "chờ", "pending", "dang cho", "đang chờ"],
-      value: "PENDING",
-    },
-    {
-      keywords: [
-        "thanh cong",
-        "thành công",
-        "success",
-        "hoan thanh",
-        "hoàn thành",
-      ],
-      value: "SUCCESS",
-    },
-    {
-      keywords: ["that bai", "thất bại", "failed", "loi", "lỗi"],
-      value: "FAILED",
-    },
-  ];
-  var deviceMap = [
-    {
-      keywords: ["bao chay", "báo cháy", "chay", "cháy", "fire"],
-      value: "Báo cháy",
-    },
-    {
-      keywords: ["den ngu", "đèn ngủ", "den", "đèn", "light"],
-      value: "Đèn ngủ",
-    },
-    {
-      keywords: ["quat gio", "quạt gió", "quat", "quạt", "fan"],
-      value: "Quạt gió",
-    },
-    {
-      keywords: ["dieu hoa", "điều hòa", "dieu", "điều", "ac"],
-      value: "Điều hòa",
-    },
-  ];
-
-  actionMap.forEach(function (item) {
-    item.keywords.forEach(function (kw) {
-      var kwClean = removeAccents(kw);
-      if (kwClean.startsWith(input) || input.startsWith(kwClean)) {
-        if (extras.indexOf("action:" + item.value) === -1)
-          extras.push("action:" + item.value);
-      }
-    });
-  });
-  statusMap.forEach(function (item) {
-    item.keywords.forEach(function (kw) {
-      var kwClean = removeAccents(kw);
-      if (kwClean.startsWith(input) || input.startsWith(kwClean)) {
-        if (extras.indexOf("status:" + item.value) === -1)
-          extras.push("status:" + item.value);
-      }
-    });
-  });
-  deviceMap.forEach(function (item) {
-    item.keywords.forEach(function (kw) {
-      var kwClean = removeAccents(kw);
-      if (kwClean.startsWith(input) || input.startsWith(kwClean)) {
-        if (extras.indexOf("device:" + item.value) === -1)
-          extras.push("device:" + item.value);
-      }
-    });
-  });
-
-  return extras;
-}
-
 router.get("/", async (req, res) => {
   try {
     var page = parseInt(req.query.page) || 1;
@@ -95,9 +8,9 @@ router.get("/", async (req, res) => {
     var offset = (page - 1) * limit;
     var search = req.query.search || "";
     var deviceType = req.query.device || "";
+    var actionFilter = req.query.action || "";
+    var statusFilter = req.query.status || "";
     var sortOrder = req.query.sort || "desc";
-    var timeFrom = req.query.timeFrom || "";
-    var timeTo = req.query.timeTo || "";
 
     var whereClause = "WHERE 1=1";
     var params = [];
@@ -107,41 +20,20 @@ router.get("/", async (req, res) => {
       params.push(deviceType);
     }
 
-    if (search) {
-      var s = "%" + search + "%";
-      var conditions = [];
-      var searchParams = [];
-      conditions.push("CAST(dh.id AS CHAR) LIKE ?");
-      searchParams.push(s);
-      conditions.push("dh.time_text LIKE ?");
-      searchParams.push(s);
-      conditions.push("d.device_name LIKE ?");
-      searchParams.push(s);
-      var extras = getSearchExtras(search);
-      extras.forEach(function (extra) {
-        var parts = extra.split(":");
-        if (parts[0] === "action") {
-          conditions.push("dh.action = ?");
-          searchParams.push(parts[1]);
-        } else if (parts[0] === "status") {
-          conditions.push("dh.status = ?");
-          searchParams.push(parts[1]);
-        } else if (parts[0] === "device") {
-          conditions.push("d.device_name = ?");
-          searchParams.push(parts[1]);
-        }
-      });
-      whereClause += " AND (" + conditions.join(" OR ") + ")";
-      params.push.apply(params, searchParams);
+    if (actionFilter) {
+      whereClause += " AND dh.action = ?";
+      params.push(actionFilter);
     }
 
-    if (timeFrom) {
-      whereClause += " AND dh.created_ts_ms >= ?";
-      params.push(new Date(timeFrom).getTime());
+    if (statusFilter) {
+      whereClause += " AND dh.status = ?";
+      params.push(statusFilter);
     }
-    if (timeTo) {
-      whereClause += " AND dh.created_ts_ms <= ?";
-      params.push(new Date(timeTo).getTime());
+
+    // Tìm kiếm chỉ theo thời gian
+    if (search) {
+      whereClause += " AND dh.time_text LIKE ?";
+      params.push("%" + search + "%");
     }
 
     var [countResult] = await db.execute(

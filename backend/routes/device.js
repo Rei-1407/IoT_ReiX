@@ -86,19 +86,39 @@ module.exports = function (broadcast) {
       });
       mqttClient.publish("control", controlMessage);
 
-      // Timeout 10 giây — nếu ESP32 không phản hồi → FAILED
+      // Timeout 10 giây — nếu ESP32 không phản hồi → INSERT thêm row FAILED
       setTimeout(async () => {
         try {
           const [check] = await db.execute(
-            "SELECT status FROM device_history WHERE id = ?",
+            "SELECT status, device_id, action, expected_on, prev_on FROM device_history WHERE id = ?",
             [historyId],
           );
           if (check.length > 0 && check[0].status === "PENDING") {
+            const failNow = Date.now();
+            const failDate = new Date();
+            const fdd = String(failDate.getDate()).padStart(2, "0");
+            const fmm = String(failDate.getMonth() + 1).padStart(2, "0");
+            const fyyyy = failDate.getFullYear();
+            const fhh = String(failDate.getHours()).padStart(2, "0");
+            const fmi = String(failDate.getMinutes()).padStart(2, "0");
+            const fss = String(failDate.getSeconds()).padStart(2, "0");
+            const failTimeText =
+              fdd + "/" + fmm + "/" + fyyyy + " " + fhh + ":" + fmi + ":" + fss;
+
+            // INSERT row mới với status FAILED (giữ nguyên row PENDING)
             await db.execute(
-              `UPDATE device_history 
-               SET status = 'FAILED', resolved_ts_ms = ?, resolved_at = NOW()
-               WHERE id = ?`,
-              [Date.now(), historyId],
+              `INSERT INTO device_history 
+               (device_id, action, status, expected_on, prev_on, created_ts_ms, resolved_ts_ms, resolved_at, time_text)
+               VALUES (?, ?, 'FAILED', ?, ?, ?, ?, NOW(), ?)`,
+              [
+                check[0].device_id,
+                check[0].action,
+                check[0].expected_on,
+                check[0].prev_on,
+                failNow,
+                failNow,
+                failTimeText,
+              ],
             );
 
             // Push thông báo timeout tới frontend
@@ -110,7 +130,7 @@ module.exports = function (broadcast) {
             });
 
             console.log(
-              `⏰ Timeout 10s — device_history #${historyId} → FAILED`,
+              `⏰ Timeout 10s — device ${device_key} → INSERT FAILED row`,
             );
           }
         } catch (err) {
