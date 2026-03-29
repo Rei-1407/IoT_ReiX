@@ -107,7 +107,7 @@ module.exports = function (broadcast) {
 
             // INSERT row mới với status FAILED (giữ nguyên row PENDING)
             await db.execute(
-              `INSERT INTO device_history 
+              `INSERT INTO device_history
                (device_id, action, status, expected_on, prev_on, created_ts_ms, resolved_ts_ms, resolved_at, time_text)
                VALUES (?, ?, 'FAILED', ?, ?, ?, ?, NOW(), ?)`,
               [
