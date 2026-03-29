@@ -28,6 +28,10 @@ const mqttClient = require("./config/mqtt");
 // ESP32 online detection
 let lastMqttMessage = 0;
 let esp32Online = false;
+let esp32SessionStart = 0; // Thời điểm ESP32 reconnect gần nhất
+
+// Map lưu timeout đang chờ, key = device_key → cancel khi ESP32 phản hồi sớm
+const pendingTimeouts = new Map();
 
 // ============================================
 // WEBSOCKET — Quản lý client connections
@@ -68,6 +72,7 @@ mqttClient.on("message", async (topic, payload) => {
     lastMqttMessage = Date.now();
     if (!esp32Online) {
       esp32Online = true;
+      esp32SessionStart = Date.now(); // Đánh dấu session mới khi ESP32 vừa online
       broadcast("esp32_status", { online: true });
     }
     const now = Date.now();
@@ -183,16 +188,24 @@ mqttClient.on("message", async (topic, payload) => {
     if (topic === "status") {
       const result = message.result === "success" ? "SUCCESS" : "FAILED";
 
-      // Tìm record PENDING gần nhất của device này và cập nhật
+      // Chỉ cập nhật PENDING được tạo SAU khi ESP32 kết nối lần này
+      // → bảo toàn các PENDING từ session trước (ESP32 bị rút giữa chừng)
       await db.execute(
-        `UPDATE device_history 
-         SET status = ?, resolved_ts_ms = ?, resolved_at = NOW() 
+        `UPDATE device_history
+         SET status = ?, resolved_ts_ms = ?, resolved_at = NOW()
          WHERE device_id = (SELECT id FROM devices WHERE device_key = ?)
-           AND status = 'PENDING' 
-         ORDER BY created_ts_ms DESC 
+           AND status = 'PENDING'
+           AND created_ts_ms >= ?
+         ORDER BY created_ts_ms DESC
          LIMIT 1`,
-        [result, now, message.action],
+        [result, now, message.action, esp32SessionStart],
       );
+
+      // Cancel timeout 10s vì ESP32 đã phản hồi sớm
+      if (pendingTimeouts.has(message.action)) {
+        clearTimeout(pendingTimeouts.get(message.action));
+        pendingTimeouts.delete(message.action);
+      }
 
       // Push kết quả tới frontend
       broadcast("control_result", {
@@ -227,7 +240,7 @@ setInterval(() => {
 // REST API ROUTES (sẽ tạo chi tiết ở bước sau)
 // ============================================
 const sensorRoutes = require("./routes/sensor");
-const deviceRoutes = require("./routes/device")(broadcast);
+const deviceRoutes = require("./routes/device")(broadcast, pendingTimeouts);
 const historyRoutes = require("./routes/history");
 
 app.use("/api/sensors", sensorRoutes);

@@ -22,6 +22,7 @@ function Sidebar() {
   useEffect(() => {
     let ws;
     let reconnectTimer;
+    let isCleanedUp = false;
 
     // Lấy trạng thái ESP32 ban đầu khi reload
     fetch("http://localhost:5000/api/health")
@@ -30,6 +31,7 @@ function Sidebar() {
       .catch(() => setIsOnline(false));
 
     const connectWS = () => {
+      if (isCleanedUp) return;
       ws = new WebSocket("ws://localhost:5000");
 
       ws.onmessage = (event) => {
@@ -43,12 +45,16 @@ function Sidebar() {
           if (evtName === "sensor_data") {
             setIsOnline(true);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error("Sidebar WebSocket parse error:", e);
+        }
       };
 
       ws.onclose = () => {
         setIsOnline(false);
-        reconnectTimer = setTimeout(connectWS, 3000);
+        if (!isCleanedUp) {
+          reconnectTimer = setTimeout(connectWS, 3000);
+        }
       };
 
       ws.onerror = () => {
@@ -59,8 +65,9 @@ function Sidebar() {
     connectWS();
 
     return () => {
-      if (ws) ws.close();
+      isCleanedUp = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
     };
   }, []);
 
