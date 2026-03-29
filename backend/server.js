@@ -30,6 +30,9 @@ let lastMqttMessage = 0;
 let esp32Online = false;
 let esp32SessionStart = 0; // Thời điểm ESP32 reconnect gần nhất
 
+// Map lưu timeout đang chờ, key = device_key → cancel khi ESP32 phản hồi sớm
+const pendingTimeouts = new Map();
+
 // ============================================
 // WEBSOCKET — Quản lý client connections
 // Mỗi khi frontend mở trang, nó connect WebSocket
@@ -198,6 +201,12 @@ mqttClient.on("message", async (topic, payload) => {
         [result, now, message.action, esp32SessionStart],
       );
 
+      // Cancel timeout 10s vì ESP32 đã phản hồi sớm
+      if (pendingTimeouts.has(message.action)) {
+        clearTimeout(pendingTimeouts.get(message.action));
+        pendingTimeouts.delete(message.action);
+      }
+
       // Push kết quả tới frontend
       broadcast("control_result", {
         action: message.action,
@@ -231,7 +240,7 @@ setInterval(() => {
 // REST API ROUTES (sẽ tạo chi tiết ở bước sau)
 // ============================================
 const sensorRoutes = require("./routes/sensor");
-const deviceRoutes = require("./routes/device")(broadcast);
+const deviceRoutes = require("./routes/device")(broadcast, pendingTimeouts);
 const historyRoutes = require("./routes/history");
 
 app.use("/api/sensors", sensorRoutes);

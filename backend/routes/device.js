@@ -2,7 +2,7 @@ const router = require("express").Router();
 const db = require("../config/db");
 const mqttClient = require("../config/mqtt");
 
-module.exports = function (broadcast) {
+module.exports = function (broadcast, pendingTimeouts) {
   // GET /api/devices/state
   router.get("/state", async (req, res) => {
     try {
@@ -86,8 +86,14 @@ module.exports = function (broadcast) {
       });
       mqttClient.publish("control", controlMessage);
 
+      // Clear timeout cũ nếu có (gửi lệnh mới cho cùng device)
+      if (pendingTimeouts.has(device_key)) {
+        clearTimeout(pendingTimeouts.get(device_key));
+      }
+
       // Timeout 10 giây — nếu ESP32 không phản hồi → INSERT thêm row FAILED
-      setTimeout(async () => {
+      const timeoutId = setTimeout(async () => {
+        pendingTimeouts.delete(device_key);
         try {
           const [check] = await db.execute(
             "SELECT status, device_id, action, expected_on, prev_on FROM device_history WHERE id = ?",
@@ -137,6 +143,7 @@ module.exports = function (broadcast) {
           console.error("❌ Timeout handler error:", err.message);
         }
       }, 10000);
+      pendingTimeouts.set(device_key, timeoutId);
 
       res.json({
         message: "Control command sent",

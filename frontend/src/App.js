@@ -50,79 +50,88 @@ function App() {
   // WebSocket — chạy 1 lần duy nhất, không bao giờ unmount
   useEffect(function () {
     var reconnectTimer;
+    var isCleanedUp = false;
 
     function connectWS() {
+      if (isCleanedUp) return;
       var ws = new WebSocket("ws://localhost:5000");
       wsRef.current = ws;
 
       ws.onmessage = function (event) {
-        var parsed = JSON.parse(event.data);
-        var evtName = parsed.event;
-        var data = parsed.data;
+        try {
+          var parsed = JSON.parse(event.data);
+          var evtName = parsed.event;
+          var data = parsed.data;
 
-        if (evtName === "sensor_data") {
-          setSensorData({ temp: data.temp, hum: data.hum, lux: data.lux });
-          setCurrentTime(data.time_text);
+          if (evtName === "sensor_data") {
+            setSensorData({ temp: data.temp, hum: data.hum, lux: data.lux });
+            setCurrentTime(data.time_text);
 
-          setChartData(function (prev) {
-            var newPoint = {
-              time: data.time_text.split(" ")[0],
-              temp: data.temp,
-              hum: data.hum,
-              lux: data.lux,
+            setChartData(function (prev) {
+              var newPoint = {
+                time: data.time_text.split(" ")[0],
+                temp: data.temp,
+                hum: data.hum,
+                lux: data.lux,
+              };
+              var updated = prev.concat([newPoint]);
+              return updated.length > 20 ? updated.slice(-20) : updated;
+            });
+          }
+
+          if (evtName === "device_state") {
+            setIsAutoMode(data.auto);
+            setDeviceState({
+              fire: { is_on: data.fire > 0 ? 1 : 0, level: data.fire },
+              light: { is_on: data.light > 0 ? 1 : 0, level: data.light },
+              fan: { is_on: data.fan > 0 ? 1 : 0, level: data.fan },
+              ac: { is_on: data.ac > 0 ? 1 : 0, level: data.ac },
+            });
+          }
+
+          if (evtName === "control_result") {
+            setPendingDevices(function (prev) {
+              var updated = Object.assign({}, prev);
+              delete updated[data.action];
+              return updated;
+            });
+          }
+
+          if (evtName === "control_timeout") {
+            var deviceNames = {
+              fire: "Báo cháy",
+              light: "Đèn ngủ",
+              fan: "Quạt gió",
+              ac: "Điều hòa",
             };
-            var updated = prev.concat([newPoint]);
-            return updated.length > 20 ? updated.slice(-20) : updated;
-          });
-        }
-
-        if (evtName === "device_state") {
-          setIsAutoMode(data.auto);
-          setDeviceState({
-            fire: { is_on: data.fire > 0 ? 1 : 0, level: data.fire },
-            light: { is_on: data.light > 0 ? 1 : 0, level: data.light },
-            fan: { is_on: data.fan > 0 ? 1 : 0, level: data.fan },
-            ac: { is_on: data.ac > 0 ? 1 : 0, level: data.ac },
-          });
-        }
-
-        if (evtName === "control_result") {
-          setPendingDevices(function (prev) {
-            var updated = Object.assign({}, prev);
-            delete updated[data.action];
-            return updated;
-          });
-        }
-
-        if (evtName === "control_timeout") {
-          var deviceNames = {
-            fire: "Báo cháy",
-            light: "Đèn ngủ",
-            fan: "Quạt gió",
-            ac: "Điều hòa",
-          };
-          var displayName = deviceNames[data.device_key] || data.device_key;
-          setPendingDevices(function (prev) {
-            var updated = Object.assign({}, prev);
-            delete updated[data.device_key];
-            return updated;
-          });
-          setTimeoutError(displayName);
-          setTimeout(function () {
-            setTimeoutError(null);
-          }, 5000);
+            var displayName = deviceNames[data.device_key] || data.device_key;
+            setPendingDevices(function (prev) {
+              var updated = Object.assign({}, prev);
+              delete updated[data.device_key];
+              return updated;
+            });
+            setTimeoutError(displayName);
+            setTimeout(function () {
+              setTimeoutError(null);
+            }, 5000);
+          }
+        } catch (e) {
+          console.error("WebSocket parse error:", e);
         }
       };
 
       ws.onclose = function () {
-        reconnectTimer = setTimeout(connectWS, 3000);
+        if (!isCleanedUp) {
+          reconnectTimer = setTimeout(connectWS, 3000);
+        }
       };
     }
 
     connectWS();
     return function () {
-      if (wsRef.current) wsRef.current.close();
+      isCleanedUp = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (wsRef.current) wsRef.current.close();
     };
   }, []);
 
