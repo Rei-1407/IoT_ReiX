@@ -23,19 +23,24 @@ import "./Dashboard.css";
 
 var API = "http://localhost:5000/api";
 
-var CustomLegend = function () {
+var CustomLegend = function (props) {
+  var activeChart = props.activeChart;
+  var setActiveChart = props.setActiveChart;
   var items = [
     {
+      key: "temp",
       icon: <FaThermometerHalf style={{ color: "#ef4444" }} />,
       label: "Nhiệt độ (°C)",
       color: "#ef4444",
     },
     {
+      key: "hum",
       icon: <FaTint style={{ color: "#3b82f6" }} />,
       label: "Độ ẩm (%)",
       color: "#3b82f6",
     },
     {
+      key: "lux",
       icon: <FaSun style={{ color: "#f59e0b" }} />,
       label: "Ánh sáng (Lux)",
       color: "#f59e0b",
@@ -44,8 +49,20 @@ var CustomLegend = function () {
   return (
     <div className="custom-legend">
       {items.map(function (item, idx) {
+        var isActive = activeChart === null || activeChart === item.key;
         return (
-          <div key={idx} className="legend-item">
+          <div
+            key={idx}
+            className="legend-item"
+            style={{
+              opacity: isActive ? 1 : 0.3,
+              cursor: "pointer",
+              transition: "opacity 0.3s",
+            }}
+            onClick={function () {
+              setActiveChart(activeChart === item.key ? null : item.key);
+            }}
+          >
             <span className="legend-icon">{item.icon}</span>
             <span
               className="legend-line"
@@ -96,6 +113,7 @@ function Dashboard(props) {
   var currentTime = props.currentTime;
   var timeoutError = props.timeoutError;
   var setTimeoutError = props.setTimeoutError;
+  var [activeChart, setActiveChart] = React.useState(null);
 
   var sendControl = async function (deviceKey, value) {
     setPendingDevices(function (prev) {
@@ -247,15 +265,31 @@ function Dashboard(props) {
                   tick={{ fontSize: 13, fontWeight: 600 }}
                 />
                 <Tooltip contentStyle={{ fontSize: 14, fontWeight: 600 }} />
-                <Legend content={<CustomLegend />} />
+                <Legend
+                  content={
+                    <CustomLegend
+                      activeChart={activeChart}
+                      setActiveChart={setActiveChart}
+                    />
+                  }
+                />
                 <Line
                   yAxisId="left"
                   type="monotone"
                   dataKey="temp"
                   name="Nhiệt độ (°C)"
                   stroke="#ef4444"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
+                  strokeWidth={activeChart === "temp" ? 3 : 2}
+                  strokeOpacity={
+                    activeChart === null || activeChart === "temp" ? 1 : 0.15
+                  }
+                  dot={{
+                    r: activeChart === "temp" ? 4 : 3,
+                    strokeOpacity:
+                      activeChart === null || activeChart === "temp" ? 1 : 0.15,
+                    fillOpacity:
+                      activeChart === null || activeChart === "temp" ? 1 : 0.15,
+                  }}
                 />
                 <Line
                   yAxisId="left"
@@ -263,8 +297,17 @@ function Dashboard(props) {
                   dataKey="hum"
                   name="Độ ẩm (%)"
                   stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
+                  strokeWidth={activeChart === "hum" ? 3 : 2}
+                  strokeOpacity={
+                    activeChart === null || activeChart === "hum" ? 1 : 0.15
+                  }
+                  dot={{
+                    r: activeChart === "hum" ? 4 : 3,
+                    strokeOpacity:
+                      activeChart === null || activeChart === "hum" ? 1 : 0.15,
+                    fillOpacity:
+                      activeChart === null || activeChart === "hum" ? 1 : 0.15,
+                  }}
                 />
                 <Line
                   yAxisId="right"
@@ -272,8 +315,17 @@ function Dashboard(props) {
                   dataKey="lux"
                   name="Ánh sáng (Lux)"
                   stroke="#f59e0b"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
+                  strokeWidth={activeChart === "lux" ? 3 : 2}
+                  strokeOpacity={
+                    activeChart === null || activeChart === "lux" ? 1 : 0.15
+                  }
+                  dot={{
+                    r: activeChart === "lux" ? 4 : 3,
+                    strokeOpacity:
+                      activeChart === null || activeChart === "lux" ? 1 : 0.15,
+                    fillOpacity:
+                      activeChart === null || activeChart === "lux" ? 1 : 0.15,
+                  }}
                 />
               </LineChart>
             </ResponsiveContainer>
