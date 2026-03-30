@@ -8,7 +8,7 @@
 /* ===== SENSOR CARDS ===== */
 .sensor-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   flex-shrink: 0;
 }
@@ -431,6 +431,63 @@
   }
 }
 
+/* ============================================================
+   TỐC ĐỘ GIÓ — lá bay theo cường độ gió
+   ============================================================ */
+.card-wind .sensor-icon { color: #10b981; }
+
+/* Yên tĩnh 0-20 */
+.card-wind.wind-calm { border-left: 4px solid #6ee7b7; }
+.card-wind.wind-calm .sensor-icon { color: #6ee7b7; }
+
+/* Vừa 20-40 */
+.card-wind.wind-moderate { border-left: 4px solid #10b981; }
+.card-wind.wind-moderate .sensor-icon {
+  color: #10b981;
+  animation: wind-sway 2s ease-in-out infinite;
+}
+
+/* Mạnh 40-60 */
+.card-wind.wind-strong { border-left: 4px solid #059669; }
+.card-wind.wind-strong .sensor-icon {
+  color: #059669;
+  animation: wind-sway 1s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(5, 150, 105, 0.4));
+}
+.card-wind.wind-strong .sensor-value { color: #047857; }
+.card-wind.wind-strong {
+  background: linear-gradient(135deg, rgba(255,255,255,0.7), rgba(167,243,208,0.3));
+}
+
+/* Nguy hiểm > 60 — rung mạnh + nhấp nháy */
+.card-wind.wind-danger { border-left: 4px solid #dc2626; }
+.card-wind.wind-danger .sensor-icon {
+  color: #dc2626;
+  animation: wind-shake 0.3s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.6));
+}
+.card-wind.wind-danger .sensor-value {
+  color: #991b1b;
+  animation: temp-blink 0.8s ease-in-out infinite alternate;
+}
+.card-wind.wind-danger {
+  background: linear-gradient(135deg, rgba(254,202,202,0.5), rgba(252,165,165,0.3));
+  box-shadow: 0 2px 20px rgba(239, 68, 68, 0.25);
+}
+
+@keyframes wind-sway {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  25% { transform: rotate(-15deg) translateX(-3px); }
+  75% { transform: rotate(10deg) translateX(3px); }
+}
+@keyframes wind-shake {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  20% { transform: rotate(-20deg) translateX(-4px); }
+  40% { transform: rotate(15deg) translateX(3px); }
+  60% { transform: rotate(-10deg) translateX(-2px); }
+  80% { transform: rotate(18deg) translateX(4px); }
+}
+
 /* ===== DASHBOARD BODY ===== */
 .dashboard-body {
   display: grid;
@@ -696,6 +753,11 @@
     grid-template-columns: 1fr 300px;
   }
 }
+@media (max-width: 1200px) {
+  .sensor-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 @media (max-width: 900px) {
   .sensor-cards {
     grid-template-columns: 1fr;
@@ -898,4 +960,26 @@
   flex: 1;
   padding: 8px 0;
   text-align: center;
+}
+
+/* ===== WARNING ANIMATION ===== */
+.device-warning-on { border-left: 4px solid #ef4444; }
+.toggle-warning.toggle-sm-on {
+  background: linear-gradient(135deg, #ef4444, #f59e0b);
+}
+.warning-active {
+  color: #ef4444 !important;
+  animation: warning-blink 0.5s ease-in-out infinite;
+}
+@keyframes warning-blink {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+    transform: scale(1.1);
+  }
+  50% {
+    opacity: 0.3;
+    filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.3));
+    transform: scale(0.95);
+  }
 }

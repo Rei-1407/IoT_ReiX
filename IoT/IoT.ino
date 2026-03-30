@@ -27,6 +27,7 @@ const int LED_LIGHT = 18;
 const int LED_FAN1  = 15;
 const int LED_FAN2  = 2;
 const int LED_FAN3  = 4;
+const int LED_WARN  = 5;
 
 // ===== I2C =====
 #define ADDR_SHT31  0x44
@@ -52,12 +53,16 @@ int manualFanLevel = 0;
 int manualAcPWM    = 0;
 int manualLight    = 0;
 int manualFire     = 0;
+int manualWarning  = 0;
 
 // Current reported states
 int currentFanLevel = 0;
 int currentAcPWM    = 0;
 int currentLight    = 0;
 int currentFire     = 0;
+int currentWarning  = 0;
+unsigned long warnBlinkTimer = 0;
+bool warnBlinkState = false;
 
 static float round2(float x) {
   return ((int)(x * 100.0f + (x >= 0 ? 0.5f : -0.5f))) / 100.0f;
@@ -201,6 +206,15 @@ static void applyFireState(int state) {
   }
 }
 
+static void applyWarningState(int state) {
+  state = state ? 1 : 0;
+  currentWarning = state;
+  if (!state) {
+    digitalWrite(LED_WARN, LOW);
+    warnBlinkState = false;
+  }
+}
+
 static void applyAcPWM(int pwm) {
   pwm = constrain(pwm, 0, 255);
   ledcWrite(CH_AC, pwm);
@@ -212,6 +226,7 @@ static void applyManualStates() {
   applyLightState(manualLight);
   applyFanLevel(manualFanLevel);
   applyAcPWM(manualAcPWM);
+  applyWarningState(manualWarning);
 }
 
 static void snapshotCurrentToManual() {
@@ -220,17 +235,19 @@ static void snapshotCurrentToManual() {
   manualLight    = currentLight;
   manualFanLevel = currentFanLevel;
   manualAcPWM    = currentAcPWM;
+  manualWarning  = currentWarning;
 }
 
 // ===== PUBLISH DEVICE STATE =====
 static void publishDeviceNow() {
   StaticJsonDocument<256> doc;
 
-  doc["auto"]  = isAutoMode;
-  doc["fire"]  = currentFire;
-  doc["ac"]    = currentAcPWM;
-  doc["light"] = currentLight;
-  doc["fan"]   = currentFanLevel;
+  doc["auto"]    = isAutoMode;
+  doc["fire"]    = currentFire;
+  doc["ac"]      = currentAcPWM;
+  doc["light"]   = currentLight;
+  doc["fan"]     = currentFanLevel;
+  doc["warning"] = currentWarning;
 
   char buffer[256];
   size_t n = serializeJson(doc, buffer);
@@ -362,6 +379,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
   // ===== REQUEST DEVICE STATE =====
   if (strcmp(action, "get_device") == 0) {
     syncCurrentOutputsFromPins();
+    publishDeviceNow();
+    return;
+  }
+
+  // ===== WARNING CONTROL (hoạt động cả auto lẫn manual) =====
+  if (strcmp(action, "warning") == 0) {
+    int expected = doc["val"].as<int>() ? 1 : 0;
+    applyWarningState(expected);
+    manualWarning = expected;
+    publishStatus("warning", expected, currentWarning);
     publishDeviceNow();
     return;
   }
@@ -551,6 +578,7 @@ void setup() {
   pinMode(LED_FAN1, OUTPUT);
   pinMode(LED_FAN2, OUTPUT);
   pinMode(LED_FAN3, OUTPUT);
+  pinMode(LED_WARN, OUTPUT);
 
   ledcSetup(CH_AC, 5000, 8);
   ledcAttachPin(LED_AC, CH_AC);
@@ -563,6 +591,7 @@ void setup() {
   applyLightState(0);
   applyFanLevel(0);
   applyAcPWM(0);
+  applyWarningState(0);
 
   setup_wifi();
 
@@ -577,6 +606,15 @@ void loop() {
   client.loop();
 
   runLedEffects();
+
+  // Warning LED nháy liên tục khi bật
+  if (currentWarning) {
+    if (millis() - warnBlinkTimer >= 250) {
+      warnBlinkTimer = millis();
+      warnBlinkState = !warnBlinkState;
+      digitalWrite(LED_WARN, warnBlinkState ? HIGH : LOW);
+    }
+  }
 
   // ===== Publish sensor + device mỗi 2 giây =====
   unsigned long now = millis();

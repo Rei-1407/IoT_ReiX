@@ -13,13 +13,14 @@ import Profile from "./pages/Profile";
 import "./App.css";
 
 function App() {
-  var [sensorData, setSensorData] = useState({ temp: 0, hum: 0, lux: 0 });
+  var [sensorData, setSensorData] = useState({ temp: 0, hum: 0, lux: 0, wind: 0 });
   var [chartData, setChartData] = useState([]);
   var [deviceState, setDeviceState] = useState({
     fire: { is_on: 0, level: 0 },
     light: { is_on: 0, level: 0 },
     fan: { is_on: 0, level: 0 },
     ac: { is_on: 0, level: 0 },
+    warning: { is_on: 0, level: 0 },
   });
   var [isAutoMode, setIsAutoMode] = useState(true);
   var [currentTime, setCurrentTime] = useState("");
@@ -64,7 +65,7 @@ function App() {
           var data = parsed.data;
 
           if (evtName === "sensor_data") {
-            setSensorData({ temp: data.temp, hum: data.hum, lux: data.lux });
+            setSensorData({ temp: data.temp, hum: data.hum, lux: data.lux, wind: data.wind });
             setCurrentTime(data.time_text);
 
             setChartData(function (prev) {
@@ -73,6 +74,7 @@ function App() {
                 temp: data.temp,
                 hum: data.hum,
                 lux: data.lux,
+                wind: data.wind,
               };
               var updated = prev.concat([newPoint]);
               return updated.length > 20 ? updated.slice(-20) : updated;
@@ -86,6 +88,7 @@ function App() {
               light: { is_on: data.light > 0 ? 1 : 0, level: data.light },
               fan: { is_on: data.fan > 0 ? 1 : 0, level: data.fan },
               ac: { is_on: data.ac > 0 ? 1 : 0, level: data.ac },
+              warning: { is_on: data.warning > 0 ? 1 : 0, level: data.warning },
             });
           }
 
@@ -103,6 +106,7 @@ function App() {
               light: "Đèn ngủ",
               fan: "Quạt gió",
               ac: "Điều hòa",
+              warning: "Cảnh báo",
             };
             var displayName = deviceNames[data.device_key] || data.device_key;
             setPendingDevices(function (prev) {

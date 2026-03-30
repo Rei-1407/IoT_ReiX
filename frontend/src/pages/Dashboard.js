@@ -17,6 +17,8 @@ import {
   FaLightbulb,
   FaFan,
   FaSnowflake,
+  FaLeaf,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 import axios from "axios";
 import "./Dashboard.css";
@@ -44,6 +46,12 @@ var CustomLegend = function (props) {
       icon: <FaSun style={{ color: "#f59e0b" }} />,
       label: "Ánh sáng (Lux)",
       color: "#f59e0b",
+    },
+    {
+      key: "wind",
+      icon: <FaLeaf style={{ color: "#10b981" }} />,
+      label: "Tốc độ gió (m/s)",
+      color: "#10b981",
     },
   ];
   return (
@@ -101,6 +109,14 @@ var getLuxLevel = function (lux) {
   if (lux >= 200) return "lux-normal";
   if (lux >= 50) return "lux-dim";
   return "lux-dark";
+};
+
+// Hàm tính class hiệu ứng cho tốc độ gió
+var getWindLevel = function (wind) {
+  if (wind > 60) return "wind-danger";
+  if (wind > 40) return "wind-strong";
+  if (wind > 20) return "wind-moderate";
+  return "wind-calm";
 };
 
 function Dashboard(props) {
@@ -173,6 +189,7 @@ function Dashboard(props) {
   var tempLevel = getTempLevel(sensorData.temp);
   var humLevel = getHumLevel(sensorData.hum);
   var luxLevel = getLuxLevel(sensorData.lux);
+  var windLevel = getWindLevel(sensorData.wind);
 
   return (
     <div className="dashboard-page">
@@ -233,6 +250,18 @@ function Dashboard(props) {
             <span className="sensor-label">ÁNH SÁNG</span>
             <span className="sensor-value">
               {sensorData.lux.toFixed(2)} Lux
+            </span>
+          </div>
+        </div>
+
+        <div className={"sensor-card card-wind " + windLevel}>
+          <div className={"sensor-icon wind-icon " + windLevel}>
+            <FaLeaf />
+          </div>
+          <div className="sensor-info">
+            <span className="sensor-label">TỐC ĐỘ GIÓ</span>
+            <span className="sensor-value">
+              {sensorData.wind.toFixed(2)} m/s
             </span>
           </div>
         </div>
@@ -325,6 +354,24 @@ function Dashboard(props) {
                       activeChart === null || activeChart === "lux" ? 1 : 0.15,
                     fillOpacity:
                       activeChart === null || activeChart === "lux" ? 1 : 0.15,
+                  }}
+                />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="wind"
+                  name="Tốc độ gió (m/s)"
+                  stroke="#10b981"
+                  strokeWidth={activeChart === "wind" ? 3 : 2}
+                  strokeOpacity={
+                    activeChart === null || activeChart === "wind" ? 1 : 0.15
+                  }
+                  dot={{
+                    r: activeChart === "wind" ? 4 : 3,
+                    strokeOpacity:
+                      activeChart === null || activeChart === "wind" ? 1 : 0.15,
+                    fillOpacity:
+                      activeChart === null || activeChart === "wind" ? 1 : 0.15,
                   }}
                 />
               </LineChart>
@@ -510,6 +557,42 @@ function Dashboard(props) {
                     </button>
                   );
                 })}
+              </div>
+            )}
+          </div>
+
+          <div
+            className={
+              "device-card " +
+              (deviceState.warning.is_on ? "device-on device-warning-on" : "") +
+              " " +
+              (pendingDevices.warning ? "device-pending" : "")
+            }
+          >
+            <div className="device-left">
+              <FaExclamationTriangle
+                className={
+                  "device-icon " +
+                  (deviceState.warning.is_on ? "warning-active" : "")
+                }
+              />
+              <span className="device-name">Cảnh báo</span>
+            </div>
+            {pendingDevices.warning ? (
+              <div className="loading-spinner"></div>
+            ) : (
+              <div
+                className={
+                  "toggle-switch-sm " +
+                  (deviceState.warning.is_on
+                    ? "toggle-sm-on toggle-warning"
+                    : "")
+                }
+                onClick={function () {
+                  if (!isAutoMode) toggleDevice("warning");
+                }}
+              >
+                <div className="toggle-knob-sm"></div>
               </div>
             )}
           </div>

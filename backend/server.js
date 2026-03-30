@@ -33,6 +33,10 @@ let esp32SessionStart = 0; // Thời điểm ESP32 reconnect gần nhất
 // Map lưu timeout đang chờ, key = device_key → cancel khi ESP32 phản hồi sớm
 const pendingTimeouts = new Map();
 
+// Track auto mode server-side để điều khiển warning tự động
+let isAutoMode = true;
+let lastWarningState = -1; // Tránh spam MQTT khi trạng thái không đổi
+
 // ============================================
 // WEBSOCKET — Quản lý client connections
 // Mỗi khi frontend mở trang, nó connect WebSocket
@@ -114,7 +118,7 @@ mqttClient.on("message", async (topic, payload) => {
 
     // ===== TOPIC: sensor =====
     // ESP32 gửi: { temp: 22.92, hum: 58.57, lux: 355.83 }
-    // Backend tách thành 3 row trong sensor_readings
+    // Backend tách thành 3 row + random windspeed trong sensor_readings
     if (topic === "sensor") {
       const sensorMap = {
         temp: { id: 1, key: "temperature" },
@@ -139,18 +143,42 @@ mqttClient.on("message", async (topic, payload) => {
         }
       }
 
+      // Random windspeed 0-100 m/s (giả lập bởi backend)
+      const windspeed = Math.round(Math.random() * 10000) / 100;
+      await db.execute(
+        "INSERT INTO sensor_readings (sensor_id, ts_ms, value_num, time_text) VALUES (?, ?, ?, ?)",
+        [4, now, windspeed, timeText],
+      );
+      readings.push({
+        sensor_id: 4,
+        sensor_key: "windspeed",
+        value: windspeed,
+        time_text: timeText,
+      });
+
       // Push realtime tới frontend
       broadcast("sensor_data", {
         temp: message.temp,
         hum: message.hum,
         lux: message.lux,
+        wind: windspeed,
         time_text: timeText,
         readings,
       });
+
+      // Auto warning: windspeed > 60 → bật cảnh báo
+      if (isAutoMode) {
+        const shouldWarn = windspeed > 60 ? 1 : 0;
+        if (shouldWarn !== lastWarningState) {
+          lastWarningState = shouldWarn;
+          const msg = JSON.stringify({ action: "warning", val: shouldWarn });
+          mqttClient.publish("control", msg);
+        }
+      }
     }
 
     // ===== TOPIC: device =====
-    // ESP32 gửi: { auto: true, fire: 0, ac: 0, light: 0, fan: 0 }
+    // ESP32 gửi: { auto: true, fire: 0, ac: 0, light: 0, fan: 0, warning: 0 }
     // Backend cập nhật bảng device_state
     if (topic === "device") {
       const deviceMap = {
@@ -158,7 +186,13 @@ mqttClient.on("message", async (topic, payload) => {
         light: { id: 2 },
         fan: { id: 3 },
         ac: { id: 4 },
+        warning: { id: 5 },
       };
+
+      // Track auto mode server-side
+      if (message.auto !== undefined) {
+        isAutoMode = !!message.auto;
+      }
 
       for (const [key, info] of Object.entries(deviceMap)) {
         if (message[key] !== undefined) {
@@ -179,6 +213,7 @@ mqttClient.on("message", async (topic, payload) => {
         light: message.light,
         fan: message.fan,
         ac: message.ac,
+        warning: message.warning,
       });
     }
 
@@ -345,12 +380,12 @@ const swaggerOptions = {
           properties: {
             device_key: {
               type: "string",
-              enum: ["fire", "light", "fan", "ac"],
+              enum: ["fire", "light", "fan", "ac", "warning"],
               example: "fan",
             },
             value: {
               type: "integer",
-              description: "fire/light: 0-1, fan: 0-3, ac: 0-255",
+              description: "fire/light/warning: 0-1, fan: 0-3, ac: 0-255",
               example: 2,
             },
           },
@@ -382,7 +417,7 @@ const swaggerOptions = {
               in: "query",
               schema: {
                 type: "string",
-                enum: ["temperature", "humidity", "light"],
+                enum: ["temperature", "humidity", "light", "windspeed"],
               },
               description: "Lọc theo loại cảm biến",
             },
@@ -494,7 +529,7 @@ const swaggerOptions = {
             {
               name: "device",
               in: "query",
-              schema: { type: "string", enum: ["fire", "light", "fan", "ac"] },
+              schema: { type: "string", enum: ["fire", "light", "fan", "ac", "warning"] },
               description: "Lọc theo thiết bị",
             },
             {
