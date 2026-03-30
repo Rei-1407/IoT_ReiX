@@ -184,22 +184,32 @@ mqttClient.on("message", async (topic, payload) => {
 
     // ===== TOPIC: status =====
     // ESP32 gửi: { action: "fan", expected: 2, actual: 2, result: "success" }
-    // Backend cập nhật device_history: PENDING → SUCCESS/FAILED
+    // Backend INSERT row SUCCESS/FAILED mới (giữ nguyên row PENDING)
     if (topic === "status") {
       const result = message.result === "success" ? "SUCCESS" : "FAILED";
 
-      // Chỉ cập nhật PENDING được tạo SAU khi ESP32 kết nối lần này
-      // → bảo toàn các PENDING từ session trước (ESP32 bị rút giữa chừng)
-      await db.execute(
-        `UPDATE device_history
-         SET status = ?, resolved_ts_ms = ?, resolved_at = NOW()
+      // Tìm row PENDING gần nhất để lấy thông tin device
+      const [pending] = await db.execute(
+        `SELECT device_id, action, expected_on, prev_on
+         FROM device_history
          WHERE device_id = (SELECT id FROM devices WHERE device_key = ?)
            AND status = 'PENDING'
            AND created_ts_ms >= ?
          ORDER BY created_ts_ms DESC
          LIMIT 1`,
-        [result, now, message.action, esp32SessionStart],
+        [message.action, esp32SessionStart],
       );
+
+      if (pending.length > 0) {
+        const row = pending[0];
+        // INSERT row mới với kết quả, giữ nguyên row PENDING
+        await db.execute(
+          `INSERT INTO device_history
+           (device_id, action, status, expected_on, prev_on, created_ts_ms, resolved_ts_ms, resolved_at, time_text)
+           VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+          [row.device_id, row.action, result, row.expected_on, row.prev_on, now, now, timeText],
+        );
+      }
 
       // Cancel timeout 10s vì ESP32 đã phản hồi sớm
       if (pendingTimeouts.has(message.action)) {
