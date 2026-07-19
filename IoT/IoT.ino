@@ -25,10 +25,18 @@ const char* TOPIC_STATUS = "reix/status";  // online/offline (retained + LWT)
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
-// ===== PINOUT: 3 LED hieu ung =====
+// ===== PINOUT: 7 LED hieu ung (giu nguyen chan tu ban cu, khong phai cam lai) =====
 const int LED_TEMP  = 23;  // LED DO        — nhiet do: cang nong cang dam, bao chay thi nhay
 const int LED_HUM   = 19;  // LED XANH DUONG — do am: cang am cang dam
 const int LED_LIGHT = 18;  // LED VANG       — anh sang: troi cang toi den cang sang
+
+// Thang 3 LED bao muc nhiet (3 LED quat cu): >=25 sang 1, >=28 sang 2, >=31 sang 3
+const int LED_BAR1  = 15;
+const int LED_BAR2  = 2;
+const int LED_BAR3  = 4;
+
+// LED canh bao (cu): chop nhanh khi bao chay, chop cham khi dang mat ket noi
+const int LED_WARN  = 5;
 
 // PWM channel
 const int CH_TEMP  = 0;
@@ -91,6 +99,25 @@ static void updateLeds() {
 
   // LED VANG — anh sang: troi cang toi den cang sang (tu 300 lux tro len thi tat)
   ledcWrite(CH_LIGHT, mapBrightness(300.0f - lux, 0.0f, 300.0f));
+
+  // Thang 3 LED bao muc nhiet
+  digitalWrite(LED_BAR1, temp >= 25.0f ? HIGH : LOW);
+  digitalWrite(LED_BAR2, temp >= 28.0f ? HIGH : LOW);
+  digitalWrite(LED_BAR3, temp >= 31.0f ? HIGH : LOW);
+
+  // LED canh bao chop nhanh cung nhip voi LED do khi dang bao chay
+  digitalWrite(LED_WARN, (fireActive && fireBlinkState) ? HIGH : LOW);
+}
+
+// Chop cham LED canh bao trong luc dang doi ket noi WiFi/MQTT
+static void blinkWarnWhileWaiting() {
+  static unsigned long t = 0;
+  static bool s = false;
+  if (millis() - t >= 500) {
+    t = millis();
+    s = !s;
+    digitalWrite(LED_WARN, s ? HIGH : LOW);
+  }
 }
 
 // ===== DOC SENSOR =====
@@ -181,6 +208,7 @@ static bool tryConnectWifi(const char* ssid, const char* pass, unsigned long tim
 
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) {
+    blinkWarnWhileWaiting();
     delay(500);
     Serial.print(".");
   }
@@ -215,11 +243,16 @@ void reconnect() {
     if (client.connect(clientId.c_str(), MQTT_USER, MQTT_PASSWORD,
                        TOPIC_STATUS, 1, true, "{\"online\":false}")) {
       client.publish(TOPIC_STATUS, "{\"online\":true}", true);
+      digitalWrite(LED_WARN, LOW);  // het canh bao mat ket noi
       Serial.println("MQTT connected (HiveMQ Cloud)");
     } else {
       Serial.print("MQTT connect failed, rc=");
       Serial.println(client.state());
-      delay(2000);
+      // Vua doi vua chop cham LED canh bao
+      for (int i = 0; i < 4; i++) {
+        blinkWarnWhileWaiting();
+        delay(500);
+      }
     }
   }
 }
@@ -239,6 +272,16 @@ void setup() {
   ledcWrite(CH_TEMP, 0);
   ledcWrite(CH_HUM, 0);
   ledcWrite(CH_LIGHT, 0);
+
+  // 4 LED digital: thang muc nhiet + canh bao
+  pinMode(LED_BAR1, OUTPUT);
+  pinMode(LED_BAR2, OUTPUT);
+  pinMode(LED_BAR3, OUTPUT);
+  pinMode(LED_WARN, OUTPUT);
+  digitalWrite(LED_BAR1, LOW);
+  digitalWrite(LED_BAR2, LOW);
+  digitalWrite(LED_BAR3, LOW);
+  digitalWrite(LED_WARN, LOW);
 
   // Khoi tao BH1750 che do do lien tuc
   Wire.beginTransmission(ADDR_BH1750);

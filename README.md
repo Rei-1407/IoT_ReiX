@@ -39,15 +39,17 @@ IoT_ReiX/
 └── .github/workflows/deploy.yml  # Tự động build + deploy GitHub Pages
 ```
 
-## 💡 3 LED hiệu ứng trên ESP32
+## 💡 7 LED hiệu ứng trên ESP32 (giữ nguyên chân từ bản cũ)
 
 | LED | GPIO | Ý nghĩa |
 | --- | ---- | ------- |
-| 🔴 Đỏ | 23 | Nhiệt độ: 20°C bắt đầu sáng → 45°C sáng max. **Quá 50°C: nhấp nháy báo cháy** |
-| 🔵 Xanh dương | 19 | Độ ẩm: 40% bắt đầu sáng → 90% sáng max |
-| 🟡 Vàng | 18 | Ánh sáng: trời càng tối đèn càng sáng (≥ 300 lux thì tắt) |
+| 🔴 Đỏ | 23 | Nhiệt độ (PWM): 20°C bắt đầu sáng → 45°C sáng max. **Quá 50°C: nhấp nháy báo cháy** |
+| 🔵 Xanh dương | 19 | Độ ẩm (PWM): 40% bắt đầu sáng → 90% sáng max |
+| 🟡 Vàng | 18 | Ánh sáng (PWM): trời càng tối đèn càng sáng (≥ 300 lux thì tắt) |
+| 💡 Thang nhiệt 1/2/3 | 15, 2, 4 | Mức nhiệt: ≥25°C sáng 1 đèn, ≥28°C sáng 2, ≥31°C sáng 3 |
+| 🚨 Cảnh báo | 5 | Chớp nhanh khi báo cháy; chớp chậm khi đang mất kết nối WiFi/MQTT |
 
-Cả 3 chạy PWM, độ sáng đổi mượt theo giá trị cảm biến. Nối LED qua điện trở ~220Ω xuống GND.
+Nối LED qua điện trở ~220Ω xuống GND.
 
 ## 🔥 Cảnh báo cháy (ngưỡng 50°C)
 
