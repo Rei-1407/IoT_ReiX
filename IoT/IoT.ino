@@ -1,330 +1,96 @@
+// ============================================
+// IoT ReiX — Home Monitor
+// ESP32 doc SHT31 (nhiet do, do am) + BH1750 (anh sang)
+//   -> publish MQTT len HiveMQ Cloud (TLS, retained)
+// 3 LED hieu ung phan anh trang thai cam bien (khong dieu khien)
+// Nhiet do vuot nguong chay -> gui canh bao len ntfy.sh
+// Khong can backend / database — web tinh doc truc tiep tu broker
+// ============================================
+
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 #include <PubSubClient.h>
 #include <Wire.h>
 #include <ArduinoJson.h>
 
-// ===== WIFI / MQTT =====
-// Thong tin WiFi + MQTT nam trong secrets.h (khong commit len git)
+// Thong tin WiFi / MQTT / ntfy nam trong secrets.h (khong commit len git)
 // Uu tien WIFI1, khong bat duoc thi doi sang WIFI2
 #include "secrets.h"
 
-const char* mqtt_server = "192.168.137.1";
-const int   mqtt_port   = 1407;
-
 // ===== MQTT TOPIC =====
-const char* topic_control = "control";
-const char* topic_device  = "device";
-const char* topic_sensor  = "sensor";
-const char* topic_status  = "status";
-const char* topic_restore = "restore";
+const char* TOPIC_SENSOR = "reix/sensor";  // du lieu cam bien (retained)
+const char* TOPIC_STATUS = "reix/status";  // online/offline (retained + LWT)
 
-WiFiClient espClient;
+WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
-// ===== PINOUT =====
-const int LED_FIRE  = 23;
-const int LED_AC    = 19;
-const int LED_LIGHT = 18;
-const int LED_FAN1  = 15;
-const int LED_FAN2  = 2;
-const int LED_FAN3  = 4;
-const int LED_WARN  = 5;
+// ===== PINOUT: 3 LED hieu ung =====
+const int LED_TEMP  = 23;  // LED DO        — nhiet do: cang nong cang dam, bao chay thi nhay
+const int LED_HUM   = 19;  // LED XANH DUONG — do am: cang am cang dam
+const int LED_LIGHT = 18;  // LED VANG       — anh sang: troi cang toi den cang sang
+
+// PWM channel
+const int CH_TEMP  = 0;
+const int CH_HUM   = 1;
+const int CH_LIGHT = 2;
 
 // ===== I2C =====
 #define ADDR_SHT31  0x44
 #define ADDR_BH1750 0x23
 
 // ===== STATE =====
-bool  isAutoMode = false;
 float temp = 0.0f, hum = 0.0f, lux = 0.0f;
+
+// ===== NGUONG BAO CHAY =====
+const float FIRE_ON_TEMP  = 50.0f;  // vuot nguong nay -> bao chay
+const float FIRE_OFF_TEMP = 45.0f;  // ha xuong duoi nguong nay moi coi la het chay
+bool fireActive = false;
+
+// ntfy: gui ngay khi phat hien chay, sau do nhac lai moi 5 phut neu van chay
+unsigned long lastNtfySent = 0;
+const unsigned long NTFY_COOLDOWN = 5UL * 60UL * 1000UL;
+bool ntfySentOnce = false;
 
 // ===== INTERVAL PUBLISH (moi 2 giay) =====
 unsigned long lastPublish = 0;
 const unsigned long PUBLISH_INTERVAL = 2000;
 
-// PWM
-const int CH_AC = 0;
-
-// Trang thai mong muon (manual)
-int manualFanLevel = 0;
-int manualAcPWM    = 0;
-int manualLight    = 0;
-int manualFire     = 0;
-int manualWarning  = 0;
-
-// Trang thai thuc te
-int currentFanLevel = 0;
-int currentAcPWM    = 0;
-int currentLight    = 0;
-int currentFire     = 0;
-int currentWarning  = 0;
-unsigned long warnBlinkTimer = 0;
-bool warnBlinkState = false;
+// LED do nhay khi bao chay
+unsigned long fireBlinkTimer = 0;
+bool fireBlinkState = false;
 
 // ===== HAM TIEN ICH =====
 static float round2(float x) {
   return ((int)(x * 100.0f + (x >= 0 ? 0.5f : -0.5f))) / 100.0f;
 }
 
-static int readFanLevelFromPins() {
-  if (digitalRead(LED_FAN3)) return 3;
-  if (digitalRead(LED_FAN2)) return 2;
-  if (digitalRead(LED_FAN1)) return 1;
-  return 0;
+// Quy doi gia tri cam bien -> do sang LED 0..255 trong khoang [vMin, vMax]
+static int mapBrightness(float v, float vMin, float vMax) {
+  if (v <= vMin) return 0;
+  if (v >= vMax) return 255;
+  return (int)((v - vMin) * 255.0f / (vMax - vMin));
 }
 
-static void syncCurrentOutputsFromPins() {
-  currentFire     = digitalRead(LED_FIRE)  ? 1 : 0;
-  currentLight    = digitalRead(LED_LIGHT) ? 1 : 0;
-  currentFanLevel = readFanLevelFromPins();
-  currentAcPWM    = constrain(currentAcPWM, 0, 255);
-}
-
-// ===== DIEU KHIEN THIET BI =====
-static void applyFanLevel(int level) {
-  level = constrain(level, 0, 3);
-  digitalWrite(LED_FAN1, level >= 1 ? HIGH : LOW);
-  digitalWrite(LED_FAN2, level >= 2 ? HIGH : LOW);
-  digitalWrite(LED_FAN3, level >= 3 ? HIGH : LOW);
-  delay(1);
-  currentFanLevel = readFanLevelFromPins();
-}
-
-static void applyLightState(int state) {
-  state = state ? 1 : 0;
-  digitalWrite(LED_LIGHT, state ? HIGH : LOW);
-  delay(1);
-  currentLight = digitalRead(LED_LIGHT) ? 1 : 0;
-}
-
-static void applyFireState(int state) {
-  state = state ? 1 : 0;
-  digitalWrite(LED_FIRE, state ? HIGH : LOW);
-  delay(1);
-  currentFire = digitalRead(LED_FIRE) ? 1 : 0;
-}
-
-static void applyWarningState(int state) {
-  state = state ? 1 : 0;
-  currentWarning = state;
-  if (!state) {
-    digitalWrite(LED_WARN, LOW);
-    warnBlinkState = false;
-  }
-}
-
-static void applyAcPWM(int pwm) {
-  pwm = constrain(pwm, 0, 255);
-  ledcWrite(CH_AC, pwm);
-  currentAcPWM = pwm;
-}
-
-static void applyManualStates() {
-  applyFireState(manualFire);
-  applyLightState(manualLight);
-  applyFanLevel(manualFanLevel);
-  applyAcPWM(manualAcPWM);
-  applyWarningState(manualWarning);
-}
-
-static void snapshotCurrentToManual() {
-  syncCurrentOutputsFromPins();
-  manualFire     = currentFire;
-  manualLight    = currentLight;
-  manualFanLevel = currentFanLevel;
-  manualAcPWM    = currentAcPWM;
-  manualWarning  = currentWarning;
-}
-
-// ===== PUBLISH DEVICE STATE =====
-static void publishDeviceNow() {
-  StaticJsonDocument<256> doc;
-  doc["auto"]    = isAutoMode;
-  doc["fire"]    = currentFire;
-  doc["ac"]      = currentAcPWM;
-  doc["light"]   = currentLight;
-  doc["fan"]     = currentFanLevel;
-  doc["warning"] = currentWarning;
-
-  char buffer[256];
-  size_t n = serializeJson(doc, buffer);
-  client.publish(topic_device, buffer, n);
-}
-
-// ===== PUBLISH SENSOR DATA =====
-static void publishSensorNow() {
-  StaticJsonDocument<256> doc;
-  doc["temp"] = round2(temp);
-  doc["hum"]  = round2(hum);
-  doc["lux"]  = round2(lux);
-
-  char buffer[256];
-  size_t n = serializeJson(doc, buffer);
-  client.publish(topic_sensor, buffer, n);
-}
-
-// ===== PUBLISH CONTROL STATUS =====
-static void publishStatus(const char* action, int expected, int actual) {
-  StaticJsonDocument<256> doc;
-  doc["action"]   = action;
-  doc["expected"] = expected;
-  doc["actual"]   = actual;
-  doc["result"]   = (expected == actual) ? "success" : "fail";
-
-  char buffer[256];
-  size_t n = serializeJson(doc, buffer);
-  client.publish(topic_status, buffer, n);
-}
-
-// ===== WIFI =====
-// Thu ket noi 1 mang WiFi trong toi da timeoutMs
-static bool tryConnectWifi(const char* ssid, const char* pass, unsigned long timeoutMs) {
-  Serial.print("Dang thu WiFi: ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, pass);
-
-  unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println();
-  return WiFi.status() == WL_CONNECTED;
-}
-
-void setup_wifi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect(true);
-  delay(200);
-
-  // Uu tien "Nghiem thoan", khong bat duoc thi doi sang "TP-Link-1407"
-  while (true) {
-    if (tryConnectWifi(WIFI1_SSID, WIFI1_PASS, 10000)) break;
-    if (tryConnectWifi(WIFI2_SSID, WIFI2_PASS, 10000)) break;
-  }
-
-  Serial.print("WiFi Connected: ");
-  Serial.println(WiFi.SSID());
-}
-
-// ===== FORWARD DECLARE =====
-void readSensors();
-void autoControl();
-
-// ===== MQTT RECONNECT =====
-void reconnect() {
-  while (!client.connected()) {
-    // Rot WiFi thi ket noi lai (co fallback 2 mang)
-    if (WiFi.status() != WL_CONNECTED) setup_wifi();
-
-    String clientId = "ESP32-ReiX-SmartHome-" + String((uint32_t)ESP.getEfuseMac(), HEX);
-
-    if (client.connect(clientId.c_str(), "gianghoanglong", "14072004")) {
-      client.subscribe(topic_control);
-
-      // Yeu cau Backend gui trang thai tu DB
-      delay(500);
-      StaticJsonDocument<64> doc;
-      doc["request"] = "restore";
-      char buf[64];
-      size_t n = serializeJson(doc, buf);
-      client.publish(topic_restore, buf, n);
-      Serial.println("Sent restore request to Backend");
+// ===== LED HIEU UNG =====
+static void updateLeds() {
+  // LED DO — nhiet do: 20 do C bat dau sang, 45 do C sang max
+  // Dang bao chay thi nhay lien tuc o muc sang max
+  if (fireActive) {
+    if (millis() - fireBlinkTimer >= 250) {
+      fireBlinkTimer = millis();
+      fireBlinkState = !fireBlinkState;
     }
-    else {
-      delay(1500);
-    }
-  }
-}
-
-// ===== MQTT CALLBACK =====
-void callback(char* topic, byte* payload, unsigned int length) {
-  if (strcmp(topic, topic_control) != 0) return;
-
-  String message;
-  message.reserve(length + 1);
-  for (unsigned int i = 0; i < length; i++) {
-    message += (char)payload[i];
+    ledcWrite(CH_TEMP, fireBlinkState ? 255 : 0);
+  } else {
+    ledcWrite(CH_TEMP, mapBrightness(temp, 20.0f, 45.0f));
   }
 
-  StaticJsonDocument<256> doc;
-  if (deserializeJson(doc, message)) return;
+  // LED XANH DUONG — do am: 40% bat dau sang, 90% sang max
+  ledcWrite(CH_HUM, mapBrightness(hum, 40.0f, 90.0f));
 
-  const char* action = doc["action"] | "";
-  if (!action[0]) return;
-
-  // ===== CHUYEN CHE DO =====
-  if (strcmp(action, "mode") == 0) {
-    const char* val = doc["val"] | "auto";
-    bool nextAuto = (String(val) == "auto");
-
-    if (isAutoMode && !nextAuto) {
-      snapshotCurrentToManual();
-      applyManualStates();
-    }
-
-    isAutoMode = nextAuto;
-
-    if (isAutoMode) {
-      readSensors();
-      autoControl();
-    } else {
-      syncCurrentOutputsFromPins();
-    }
-
-    publishDeviceNow();
-    return;
-  }
-
-  // ===== YEU CAU SENSOR =====
-  if (strcmp(action, "get_sensor") == 0) {
-    publishSensorNow();
-    return;
-  }
-
-  // ===== YEU CAU TRANG THAI THIET BI =====
-  if (strcmp(action, "get_device") == 0) {
-    syncCurrentOutputsFromPins();
-    publishDeviceNow();
-    return;
-  }
-
-  // ===== DIEU KHIEN CANH BAO (ca auto lan manual) =====
-  if (strcmp(action, "warning") == 0) {
-    int expected = doc["val"].as<int>() ? 1 : 0;
-    applyWarningState(expected);
-    manualWarning = expected;
-    publishStatus("warning", expected, currentWarning);
-    publishDeviceNow();
-    return;
-  }
-
-  // ===== DIEU KHIEN THU CONG =====
-  if (!isAutoMode) {
-
-    if (strcmp(action, "fan") == 0) {
-      manualFanLevel = constrain(doc["val"].as<int>(), 0, 3);
-      applyFanLevel(manualFanLevel);
-      publishStatus("fan", manualFanLevel, currentFanLevel);
-    }
-    else if (strcmp(action, "ac") == 0) {
-      manualAcPWM = constrain(doc["val"].as<int>(), 0, 255);
-      applyAcPWM(manualAcPWM);
-      publishStatus("ac", manualAcPWM, currentAcPWM);
-    }
-    else if (strcmp(action, "light") == 0) {
-      manualLight = doc["val"].as<int>() ? 1 : 0;
-      applyLightState(manualLight);
-      publishStatus("light", manualLight, currentLight);
-    }
-    else if (strcmp(action, "fire") == 0) {
-      manualFire = doc["val"].as<int>() ? 1 : 0;
-      applyFireState(manualFire);
-      publishStatus("fire", manualFire, currentFire);
-    }
-
-    publishDeviceNow();
-  }
+  // LED VANG — anh sang: troi cang toi den cang sang (tu 300 lux tro len thi tat)
+  ledcWrite(CH_LIGHT, mapBrightness(300.0f - lux, 0.0f, 300.0f));
 }
 
 // ===== DOC SENSOR =====
@@ -353,31 +119,109 @@ void readSensors() {
   }
 }
 
-// ===== DIEU KHIEN TU DONG =====
-void autoControl() {
-  if (!isAutoMode) return;
+// ===== PUBLISH SENSOR (retained de web mo len thay ngay gia tri cuoi) =====
+static void publishSensorNow() {
+  StaticJsonDocument<192> doc;
+  doc["temp"] = round2(temp);
+  doc["hum"]  = round2(hum);
+  doc["lux"]  = round2(lux);
+  doc["fire"] = fireActive;
 
-  // Canh bao chay khi nhiet do > 50
-  int fireState = (temp > 50.0f) ? 1 : 0;
-  applyFireState(fireState);
+  char buffer[192];
+  size_t n = serializeJson(doc, buffer);
+  client.publish(TOPIC_SENSOR, (const uint8_t*)buffer, n, true);
+}
 
-  // Quat theo nhiet do
-  int fanLvl = 0;
-  if (temp >= 31) fanLvl = 3;
-  else if (temp >= 28) fanLvl = 2;
-  else if (temp >= 25) fanLvl = 1;
-  applyFanLevel(fanLvl);
+// ===== CANH BAO CHAY QUA NTFY.SH =====
+static void sendFireAlert() {
+  WiFiClientSecure ntfyClient;
+  ntfyClient.setInsecure();
+  HTTPClient http;
 
-  // Dieu hoa theo nhiet do va do am
-  int acPWM = 0;
-  if (temp > 32) acPWM = 255;
-  else if (hum > 80) acPWM = 150;
-  else if (temp > 28) acPWM = 80;
-  applyAcPWM(acPWM);
+  String url = String("https://ntfy.sh/") + NTFY_TOPIC;
+  if (!http.begin(ntfyClient, url)) return;
 
-  // Den theo anh sang
-  int lightState = (lux < 100) ? 1 : 0;
-  applyLightState(lightState);
+  http.addHeader("Title", "CANH BAO CHAY!");
+  http.addHeader("Priority", "urgent");
+  http.addHeader("Tags", "fire,rotating_light");
+
+  char body[128];
+  snprintf(body, sizeof(body),
+           "Nhiet do trong nha dang %.1f do C (vuot nguong %.0f do C). KIEM TRA NGAY!",
+           temp, FIRE_ON_TEMP);
+  int code = http.POST(String(body));
+  http.end();
+
+  Serial.print("ntfy alert sent, HTTP code: ");
+  Serial.println(code);
+}
+
+// Phat hien chay theo nguong + hysteresis (het chay khi ha xuong duoi FIRE_OFF_TEMP)
+static void checkFire() {
+  if (!fireActive && temp >= FIRE_ON_TEMP) {
+    fireActive = true;
+    ntfySentOnce = false;  // cho phep gui canh bao ngay lap tuc
+  } else if (fireActive && temp < FIRE_OFF_TEMP) {
+    fireActive = false;
+  }
+
+  if (fireActive && (!ntfySentOnce || millis() - lastNtfySent >= NTFY_COOLDOWN)) {
+    sendFireAlert();
+    ntfySentOnce = true;
+    lastNtfySent = millis();
+  }
+}
+
+// ===== WIFI =====
+// Thu ket noi 1 mang WiFi trong toi da timeoutMs
+static bool tryConnectWifi(const char* ssid, const char* pass, unsigned long timeoutMs) {
+  Serial.print("Dang thu WiFi: ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, pass);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  return WiFi.status() == WL_CONNECTED;
+}
+
+void setup_wifi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect(true);
+  delay(200);
+
+  // Uu tien WIFI1, khong bat duoc thi doi sang WIFI2
+  while (true) {
+    if (tryConnectWifi(WIFI1_SSID, WIFI1_PASS, 10000)) break;
+    if (tryConnectWifi(WIFI2_SSID, WIFI2_PASS, 10000)) break;
+  }
+
+  Serial.print("WiFi Connected: ");
+  Serial.println(WiFi.SSID());
+}
+
+// ===== MQTT RECONNECT =====
+void reconnect() {
+  while (!client.connected()) {
+    // Rot WiFi thi ket noi lai (co fallback 2 mang)
+    if (WiFi.status() != WL_CONNECTED) setup_wifi();
+
+    String clientId = "ESP32-ReiX-Monitor-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+
+    // LWT: ESP32 rot mang thi broker tu phat {"online":false} cho web
+    if (client.connect(clientId.c_str(), MQTT_USER, MQTT_PASSWORD,
+                       TOPIC_STATUS, 1, true, "{\"online\":false}")) {
+      client.publish(TOPIC_STATUS, "{\"online\":true}", true);
+      Serial.println("MQTT connected (HiveMQ Cloud)");
+    } else {
+      Serial.print("MQTT connect failed, rc=");
+      Serial.println(client.state());
+      delay(2000);
+    }
+  }
 }
 
 // ===== SETUP =====
@@ -385,34 +229,26 @@ void setup() {
   Serial.begin(115200);
   Wire.begin();
 
-  // Cau hinh chan output
-  pinMode(LED_FIRE, OUTPUT);
-  pinMode(LED_LIGHT, OUTPUT);
-  pinMode(LED_FAN1, OUTPUT);
-  pinMode(LED_FAN2, OUTPUT);
-  pinMode(LED_FAN3, OUTPUT);
-  pinMode(LED_WARN, OUTPUT);
-
-  // PWM cho dieu hoa
-  ledcSetup(CH_AC, 5000, 8);
-  ledcAttachPin(LED_AC, CH_AC);
+  // 3 kenh PWM cho 3 LED hieu ung
+  ledcSetup(CH_TEMP, 5000, 8);
+  ledcAttachPin(LED_TEMP, CH_TEMP);
+  ledcSetup(CH_HUM, 5000, 8);
+  ledcAttachPin(LED_HUM, CH_HUM);
+  ledcSetup(CH_LIGHT, 5000, 8);
+  ledcAttachPin(LED_LIGHT, CH_LIGHT);
+  ledcWrite(CH_TEMP, 0);
+  ledcWrite(CH_HUM, 0);
+  ledcWrite(CH_LIGHT, 0);
 
   // Khoi tao BH1750 che do do lien tuc
   Wire.beginTransmission(ADDR_BH1750);
   Wire.write(0x10);
   Wire.endTransmission();
 
-  // Tat tat ca thiet bi
-  applyFireState(0);
-  applyLightState(0);
-  applyFanLevel(0);
-  applyAcPWM(0);
-  applyWarningState(0);
-
-  // Ket noi WiFi va MQTT
+  // Ket noi WiFi + MQTT (TLS)
   setup_wifi();
-  client.setServer(mqtt_server, mqtt_port);
-  client.setCallback(callback);
+  espClient.setInsecure();  // bo qua kiem tra cert (du an ca nhan, du dung cho HiveMQ)
+  client.setServer(MQTT_HOST, MQTT_PORT);
 }
 
 // ===== LOOP =====
@@ -420,28 +256,15 @@ void loop() {
   if (!client.connected()) reconnect();
   client.loop();
 
-  // LED canh bao nhay lien tuc khi bat
-  if (currentWarning) {
-    if (millis() - warnBlinkTimer >= 250) {
-      warnBlinkTimer = millis();
-      warnBlinkState = !warnBlinkState;
-      digitalWrite(LED_WARN, warnBlinkState ? HIGH : LOW);
-    }
-  }
+  updateLeds();
 
-  // Publish sensor + device moi 2 giay
+  // Doc sensor + kiem tra chay + publish moi 2 giay
   unsigned long now = millis();
   if (now - lastPublish >= PUBLISH_INTERVAL) {
     lastPublish = now;
 
     readSensors();
-
-    if (isAutoMode) {
-      autoControl();
-    }
-
-    syncCurrentOutputsFromPins();
+    checkFire();
     publishSensorNow();
-    publishDeviceNow();
   }
 }

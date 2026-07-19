@@ -9,3 +9,12 @@ root.render(
     <App />
   </React.StrictMode>,
 );
+
+// Dang ky Service Worker de cai duoc PWA + hien notification
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function (err) {
+      console.error("Service worker register failed:", err);
+    });
+  });
+}

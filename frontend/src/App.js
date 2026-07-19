@@ -1,171 +1,165 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import DataSensor from "./pages/DataSensor";
-import ActionHistory from "./pages/ActionHistory";
-import Profile from "./pages/Profile";
 import "./App.css";
 
+// ============================================
+// KET NOI TRUC TIEP HIVEMQ CLOUD — KHONG CAN BACKEND
+// User "webviewer" chi co quyen DOC (Subscribe only),
+// nen de cong khai trong code cung khong sao.
+// ============================================
+var MQTT_URL =
+  "wss://9de2b37f4ea043aaace96c3b4823539f.s1.eu.hivemq.cloud:8884/mqtt";
+var MQTT_USER = "webviewer";
+var MQTT_PASS = "12345678";
+var TOPIC_SENSOR = "reix/sensor";
+var TOPIC_STATUS = "reix/status";
+var FIRE_TEMP = 50;
+
 function App() {
-  var [sensorData, setSensorData] = useState({ temp: 0, hum: 0, lux: 0, wind: 0 });
+  var [sensorData, setSensorData] = useState({ temp: 0, hum: 0, lux: 0 });
   var [chartData, setChartData] = useState([]);
-  var [deviceState, setDeviceState] = useState({
-    fire: { is_on: 0, level: 0 },
-    light: { is_on: 0, level: 0 },
-    fan: { is_on: 0, level: 0 },
-    ac: { is_on: 0, level: 0 },
-    warning: { is_on: 0, level: 0 },
-  });
-  var [isAutoMode, setIsAutoMode] = useState(true);
   var [currentTime, setCurrentTime] = useState("");
-  var [pendingDevices, setPendingDevices] = useState({});
-  var [timeoutError, setTimeoutError] = useState(null);
-  var wsRef = useRef(null);
+  var [brokerConnected, setBrokerConnected] = useState(false);
+  var [esp32Online, setEsp32Online] = useState(false);
+  var [fireAlert, setFireAlert] = useState(false);
+  var lastMsgRef = useRef(0);
+  var lastNotifyRef = useRef(0);
 
-  // Load device state khi mở web (reload giữ nguyên)
-  useEffect(function () {
-    fetch("http://localhost:5000/api/devices/state")
-      .then(function (res) {
-        return res.json();
-      })
-      .then(function (res) {
-        var states = {};
-        res.data.forEach(function (d) {
-          states[d.device_key] = { is_on: d.is_on, level: d.level };
+  // Hien notification he thong khi chay (cooldown 60s de khong spam)
+  function notifyFire(temp) {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+    if (Date.now() - lastNotifyRef.current < 60000) return;
+    lastNotifyRef.current = Date.now();
+
+    var title = "🔥 CẢNH BÁO CHÁY!";
+    var options = {
+      body:
+        "Nhiệt độ trong nhà đang " +
+        temp +
+        "°C — vượt ngưỡng " +
+        FIRE_TEMP +
+        "°C. Kiểm tra ngay!",
+      icon: "logo192.png",
+      tag: "fire-alert",
+    };
+
+    // Uu tien hien qua service worker (bat buoc tren Android)
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready
+        .then(function (reg) {
+          return reg.showNotification(title, options);
+        })
+        .catch(function () {
+          try {
+            new Notification(title, options);
+          } catch (e) {}
         });
-        setDeviceState(function (prev) {
-          return Object.assign({}, prev, states);
-        });
-      })
-      .catch(function (err) {
-        console.error("Fetch device state error:", err);
-      });
-  }, []);
+    } else {
+      try {
+        new Notification(title, options);
+      } catch (e) {}
+    }
+  }
 
-  // WebSocket — chạy 1 lần duy nhất, không bao giờ unmount
   useEffect(function () {
-    var reconnectTimer;
-    var isCleanedUp = false;
-
-    function connectWS() {
-      if (isCleanedUp) return;
-      var ws = new WebSocket("ws://localhost:5000");
-      wsRef.current = ws;
-
-      ws.onmessage = function (event) {
-        try {
-          var parsed = JSON.parse(event.data);
-          var evtName = parsed.event;
-          var data = parsed.data;
-
-          if (evtName === "sensor_data") {
-            setSensorData({ temp: data.temp, hum: data.hum, lux: data.lux, wind: data.wind });
-            setCurrentTime(data.time_text);
-
-            setChartData(function (prev) {
-              var newPoint = {
-                time: data.time_text.split(" ")[0],
-                temp: data.temp,
-                hum: data.hum,
-                lux: data.lux,
-                wind: data.wind,
-              };
-              var updated = prev.concat([newPoint]);
-              return updated.length > 20 ? updated.slice(-20) : updated;
-            });
-          }
-
-          if (evtName === "device_state") {
-            setIsAutoMode(data.auto);
-            setDeviceState({
-              fire: { is_on: data.fire > 0 ? 1 : 0, level: data.fire },
-              light: { is_on: data.light > 0 ? 1 : 0, level: data.light },
-              fan: { is_on: data.fan > 0 ? 1 : 0, level: data.fan },
-              ac: { is_on: data.ac > 0 ? 1 : 0, level: data.ac },
-              warning: { is_on: data.warning > 0 ? 1 : 0, level: data.warning },
-            });
-          }
-
-          if (evtName === "control_result") {
-            setPendingDevices(function (prev) {
-              var updated = Object.assign({}, prev);
-              delete updated[data.action];
-              return updated;
-            });
-          }
-
-          if (evtName === "control_timeout") {
-            var deviceNames = {
-              fire: "Báo cháy",
-              light: "Đèn ngủ",
-              fan: "Quạt gió",
-              ac: "Điều hòa",
-              warning: "Cảnh báo",
-            };
-            var displayName = deviceNames[data.device_key] || data.device_key;
-            setPendingDevices(function (prev) {
-              var updated = Object.assign({}, prev);
-              delete updated[data.device_key];
-              return updated;
-            });
-            setTimeoutError(displayName);
-            setTimeout(function () {
-              setTimeoutError(null);
-            }, 5000);
-          }
-        } catch (e) {
-          console.error("WebSocket parse error:", e);
-        }
-      };
-
-      ws.onclose = function () {
-        if (!isCleanedUp) {
-          reconnectTimer = setTimeout(connectWS, 3000);
-        }
-      };
+    if (!window.mqtt) {
+      console.error("Không tải được thư viện MQTT (mqtt.min.js)");
+      return;
     }
 
-    connectWS();
+    var client = window.mqtt.connect(MQTT_URL, {
+      username: MQTT_USER,
+      password: MQTT_PASS,
+      clean: true,
+      reconnectPeriod: 3000,
+      connectTimeout: 10000,
+    });
+
+    client.on("connect", function () {
+      setBrokerConnected(true);
+      client.subscribe([TOPIC_SENSOR, TOPIC_STATUS]);
+    });
+
+    client.on("close", function () {
+      setBrokerConnected(false);
+    });
+
+    client.on("error", function (err) {
+      console.error("MQTT error:", err && err.message);
+    });
+
+    client.on("message", function (topic, payload, packet) {
+      try {
+        var data = JSON.parse(payload.toString());
+
+        // ESP32 bao online/offline (retained + Last Will)
+        if (topic === TOPIC_STATUS) {
+          setEsp32Online(!!data.online);
+          return;
+        }
+
+        if (topic === TOPIC_SENSOR) {
+          // retained = gia tri cu broker giu lai tu truoc, khong phai data song
+          var isLive = !packet.retain;
+          var now = new Date();
+          var timeText = now.toLocaleTimeString("vi-VN", { hour12: false });
+
+          setSensorData({
+            temp: data.temp || 0,
+            hum: data.hum || 0,
+            lux: data.lux || 0,
+          });
+          setCurrentTime(now.toLocaleDateString("vi-VN") + " " + timeText);
+
+          setChartData(function (prev) {
+            var updated = prev.concat([
+              { time: timeText, temp: data.temp, hum: data.hum, lux: data.lux },
+            ]);
+            return updated.length > 30 ? updated.slice(-30) : updated;
+          });
+
+          var onFire = data.fire === true || data.temp >= FIRE_TEMP;
+          setFireAlert(onFire);
+
+          if (isLive) {
+            lastMsgRef.current = Date.now();
+            setEsp32Online(true);
+            if (onFire) notifyFire(data.temp);
+          }
+        }
+      } catch (e) {
+        console.error("MQTT parse error:", e);
+      }
+    });
+
+    // > 8 giay khong co du lieu song -> coi nhu ESP32 mat tin hieu
+    var timer = setInterval(function () {
+      if (lastMsgRef.current && Date.now() - lastMsgRef.current > 8000) {
+        setEsp32Online(false);
+      }
+    }, 2000);
+
     return function () {
-      isCleanedUp = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (wsRef.current) wsRef.current.close();
+      clearInterval(timer);
+      client.end(true);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" />} />
-          <Route
-            path="/dashboard"
-            element={
-              <Dashboard
-                sensorData={sensorData}
-                chartData={chartData}
-                deviceState={deviceState}
-                isAutoMode={isAutoMode}
-                pendingDevices={pendingDevices}
-                setPendingDevices={setPendingDevices}
-                currentTime={currentTime}
-                timeoutError={timeoutError}
-                setTimeoutError={setTimeoutError}
-              />
-            }
-          />
-          <Route path="/data-sensor" element={<DataSensor />} />
-          <Route path="/action-history" element={<ActionHistory />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
-      </Layout>
-    </Router>
+    <div className="app-layout">
+      <div className="main-content">
+        <Dashboard
+          sensorData={sensorData}
+          chartData={chartData}
+          currentTime={currentTime}
+          brokerConnected={brokerConnected}
+          esp32Online={esp32Online}
+          fireAlert={fireAlert}
+        />
+      </div>
+    </div>
   );
 }
 

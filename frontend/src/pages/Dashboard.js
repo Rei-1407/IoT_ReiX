@@ -14,16 +14,15 @@ import {
   FaTint,
   FaSun,
   FaFire,
-  FaLightbulb,
-  FaFan,
-  FaSnowflake,
-  FaLeaf,
-  FaExclamationTriangle,
+  FaBell,
+  FaMobileAlt,
+  FaWifi,
+  FaMicrochip,
 } from "react-icons/fa";
-import axios from "axios";
 import "./Dashboard.css";
 
-var API = "http://localhost:5000/api";
+var NTFY_TOPIC = "reix-bao-chay-1407";
+var FIRE_TEMP = 50;
 
 var CustomLegend = function (props) {
   var activeChart = props.activeChart;
@@ -46,12 +45,6 @@ var CustomLegend = function (props) {
       icon: <FaSun style={{ color: "#f59e0b" }} />,
       label: "Ánh sáng (Lux)",
       color: "#f59e0b",
-    },
-    {
-      key: "wind",
-      icon: <FaLeaf style={{ color: "#10b981" }} />,
-      label: "Tốc độ gió (m/s)",
-      color: "#10b981",
     },
   ];
   return (
@@ -111,107 +104,74 @@ var getLuxLevel = function (lux) {
   return "lux-dark";
 };
 
-// Hàm tính class hiệu ứng cho tốc độ gió
-var getWindLevel = function (wind) {
-  if (wind > 60) return "wind-danger";
-  if (wind > 40) return "wind-strong";
-  if (wind > 20) return "wind-moderate";
-  return "wind-calm";
-};
-
 function Dashboard(props) {
   var sensorData = props.sensorData;
   var chartData = props.chartData;
-  var deviceState = props.deviceState;
-  var isAutoMode = props.isAutoMode;
-  var pendingDevices = props.pendingDevices;
-  var setPendingDevices = props.setPendingDevices;
   var currentTime = props.currentTime;
-  var timeoutError = props.timeoutError;
-  var setTimeoutError = props.setTimeoutError;
+  var brokerConnected = props.brokerConnected;
+  var esp32Online = props.esp32Online;
+  var fireAlert = props.fireAlert;
+
   var [activeChart, setActiveChart] = React.useState(null);
+  var [notifPerm, setNotifPerm] = React.useState(
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported",
+  );
 
-  var sendControl = async function (deviceKey, value) {
-    setPendingDevices(function (prev) {
-      return Object.assign({}, prev, { [deviceKey]: true });
+  var askNotify = function () {
+    if (typeof Notification === "undefined") return;
+    Notification.requestPermission().then(function (perm) {
+      setNotifPerm(perm);
     });
-    try {
-      await axios.post(API + "/devices/control", {
-        device_key: deviceKey,
-        value: value,
-      });
-    } catch (err) {
-      console.error("Control error:", err);
-      setPendingDevices(function (prev) {
-        var u = Object.assign({}, prev);
-        delete u[deviceKey];
-        return u;
-      });
-    }
-    setTimeout(function () {
-      setPendingDevices(function (prev) {
-        var u = Object.assign({}, prev);
-        delete u[deviceKey];
-        return u;
-      });
-    }, 10000);
-  };
-
-  var toggleMode = async function () {
-    var newMode = isAutoMode ? "manual" : "auto";
-    try {
-      await axios.post(API + "/devices/control", {
-        device_key: "mode",
-        value: newMode,
-      });
-    } catch (err) {
-      console.error("Mode toggle error:", err);
-    }
-  };
-
-  var toggleDevice = function (dk) {
-    sendControl(dk, deviceState[dk].is_on ? 0 : 1);
-  };
-  var setFanLevel = function (l) {
-    sendControl("fan", l);
-  };
-  var setAcMode = function (m) {
-    var map = { OFF: 0, Sleep: 80, Dry: 150, Cool: 255 };
-    sendControl("ac", map[m] || 0);
-  };
-  var getAcMode = function (l) {
-    if (l === 0) return "OFF";
-    if (l <= 80) return "Sleep";
-    if (l <= 150) return "Dry";
-    return "Cool";
   };
 
   var tempLevel = getTempLevel(sensorData.temp);
   var humLevel = getHumLevel(sensorData.hum);
   var luxLevel = getLuxLevel(sensorData.lux);
-  var windLevel = getWindLevel(sensorData.wind);
 
   return (
     <div className="dashboard-page">
-      {timeoutError && (
-        <div className="timeout-alert">
-          <span className="timeout-icon">⚠️</span>
-          <span>
-            Thiết bị <strong>{timeoutError}</strong> không phản hồi sau 10 giây.
-            Kiểm tra kết nối phần cứng!
+      {/* ===== HEADER: ten app + trang thai ket noi ===== */}
+      <div className="monitor-header">
+        <div className="monitor-title-block">
+          <span className="monitor-title">🏠 ReiX Home Monitor</span>
+          <span className="monitor-sub">
+            {currentTime
+              ? "Cập nhật lúc: " + currentTime
+              : "Đang chờ dữ liệu..."}
           </span>
-          <button
-            className="timeout-close"
-            onClick={function () {
-              setTimeoutError(null);
-            }}
+        </div>
+        <div className="monitor-badges">
+          <span
+            className={
+              "status-badge " + (brokerConnected ? "badge-on" : "badge-off")
+            }
           >
-            ✕
-          </button>
+            <FaWifi /> {brokerConnected ? "Máy chủ OK" : "Mất máy chủ"}
+          </span>
+          <span
+            className={
+              "status-badge " + (esp32Online ? "badge-on" : "badge-off")
+            }
+          >
+            <FaMicrochip /> {esp32Online ? "Cảm biến Online" : "Cảm biến Offline"}
+          </span>
+        </div>
+      </div>
+
+      {/* ===== BANNER BAO CHAY ===== */}
+      {fireAlert && (
+        <div className="fire-banner">
+          <FaFire className="fire-banner-icon" />
+          <span>
+            <strong>CẢNH BÁO CHÁY!</strong> Nhiệt độ đang{" "}
+            {sensorData.temp.toFixed(1)}°C — vượt ngưỡng {FIRE_TEMP}°C. Kiểm
+            tra ngay!
+          </span>
         </div>
       )}
 
-      <div className="sensor-cards">
+      {/* ===== 3 CARD CAM BIEN ===== */}
+      <div className="sensor-cards sensor-cards-3">
         <div className={"sensor-card card-temp " + tempLevel}>
           <div className={"sensor-icon temp-icon " + tempLevel}>
             <FaThermometerHalf />
@@ -253,21 +213,10 @@ function Dashboard(props) {
             </span>
           </div>
         </div>
-
-        <div className={"sensor-card card-wind " + windLevel}>
-          <div className={"sensor-icon wind-icon " + windLevel}>
-            <FaLeaf />
-          </div>
-          <div className="sensor-info">
-            <span className="sensor-label">TỐC ĐỘ GIÓ</span>
-            <span className="sensor-value">
-              {sensorData.wind.toFixed(2)} m/s
-            </span>
-          </div>
-        </div>
       </div>
 
       <div className="dashboard-body">
+        {/* ===== BIEU DO REALTIME ===== */}
         <div className="chart-container">
           <div className="chart-header">
             <span className="chart-title">📈 GIÁM SÁT REALTIME</span>
@@ -356,245 +305,69 @@ function Dashboard(props) {
                       activeChart === null || activeChart === "lux" ? 1 : 0.15,
                   }}
                 />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="wind"
-                  name="Tốc độ gió (m/s)"
-                  stroke="#10b981"
-                  strokeWidth={activeChart === "wind" ? 3 : 2}
-                  strokeOpacity={
-                    activeChart === null || activeChart === "wind" ? 1 : 0.15
-                  }
-                  dot={{
-                    r: activeChart === "wind" ? 4 : 3,
-                    strokeOpacity:
-                      activeChart === null || activeChart === "wind" ? 1 : 0.15,
-                    fillOpacity:
-                      activeChart === null || activeChart === "wind" ? 1 : 0.15,
-                  }}
-                />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="control-panel">
-          <div className="control-header">
-            <div className="control-header-left">
-              <span className="control-title">CHẾ ĐỘ</span>
-              <span className="mode-sub">
-                {isAutoMode ? "Điều khiển tự động" : "Điều khiển thủ công"}
-              </span>
-            </div>
-            <div className="mode-toggle" onClick={toggleMode}>
-              <span
-                className={
-                  "mode-label " +
-                  (!isAutoMode ? "mode-active-manual" : "mode-active-auto")
-                }
-              >
-                {isAutoMode ? "AUTO" : "MANUAL"}
-              </span>
-              <div
-                className={"toggle-switch " + (isAutoMode ? "toggle-on" : "")}
-              >
-                <div className="toggle-knob"></div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className={
-              "device-card " +
-              (deviceState.fire.is_on ? "device-on device-fire-on" : "") +
-              " " +
-              (pendingDevices.fire ? "device-pending" : "")
-            }
-          >
-            <div className="device-left">
-              <FaFire
-                className={
-                  "device-icon " + (deviceState.fire.is_on ? "fire-active" : "")
-                }
-              />
-              <span className="device-name">Báo cháy</span>
-            </div>
-            {pendingDevices.fire ? (
-              <div className="loading-spinner"></div>
+        {/* ===== PANEL CANH BAO + CAI APP ===== */}
+        <div className="control-panel alert-panel">
+          <div className="panel-block">
+            <span className="panel-title">
+              <FaBell /> THÔNG BÁO TRÊN MÁY NÀY
+            </span>
+            {notifPerm === "granted" ? (
+              <p className="panel-ok">
+                ✅ Đã bật — máy này sẽ nhận thông báo khi nhiệt độ vượt{" "}
+                {FIRE_TEMP}°C (cần đang mở app/web).
+              </p>
+            ) : notifPerm === "unsupported" ? (
+              <p className="panel-text">
+                Trình duyệt này không hỗ trợ thông báo. Trên iPhone: thêm app
+                vào Màn hình chính trước rồi mở từ đó.
+              </p>
             ) : (
-              <div
-                className={
-                  "toggle-switch-sm " +
-                  (deviceState.fire.is_on ? "toggle-sm-on toggle-fire" : "")
-                }
-                onClick={function () {
-                  if (!isAutoMode) toggleDevice("fire");
-                }}
-              >
-                <div className="toggle-knob-sm"></div>
-              </div>
+              <button className="notify-btn" onClick={askNotify}>
+                🔔 Bật cảnh báo cháy trên thiết bị này
+              </button>
             )}
           </div>
 
-          <div
-            className={
-              "device-card " +
-              (deviceState.light.is_on ? "device-on device-light-on" : "") +
-              " " +
-              (pendingDevices.light ? "device-pending" : "")
-            }
-          >
-            <div className="device-left">
-              <FaLightbulb
-                className={
-                  "device-icon " +
-                  (deviceState.light.is_on ? "light-active" : "")
-                }
-              />
-              <span className="device-name">Đèn ngủ</span>
-            </div>
-            {pendingDevices.light ? (
-              <div className="loading-spinner"></div>
-            ) : (
-              <div
-                className={
-                  "toggle-switch-sm " +
-                  (deviceState.light.is_on ? "toggle-sm-on toggle-light" : "")
-                }
-                onClick={function () {
-                  if (!isAutoMode) toggleDevice("light");
-                }}
-              >
-                <div className="toggle-knob-sm"></div>
-              </div>
-            )}
+          <div className="panel-block">
+            <span className="panel-title">
+              <FaFire /> BÁO CHÁY TỪ XA (NTFY)
+            </span>
+            <p className="panel-text">
+              Nhận báo cháy kể cả khi <strong>không mở</strong> web/app:
+            </p>
+            <ol className="panel-steps">
+              <li>
+                Cài app <strong>ntfy</strong> (App Store / Google Play)
+              </li>
+              <li>
+                Subscribe topic: <code className="ntfy-topic">{NTFY_TOPIC}</code>
+              </li>
+            </ol>
+            <a
+              className="ntfy-link"
+              href={"https://ntfy.sh/" + NTFY_TOPIC}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Hoặc mở kênh cảnh báo trên web →
+            </a>
           </div>
 
-          <div
-            className={
-              "device-card device-card-vertical " +
-              (deviceState.fan.level > 0 ? "device-on device-fan-on" : "") +
-              " " +
-              (pendingDevices.fan ? "device-pending" : "")
-            }
-          >
-            <div className="device-top-row">
-              <FaFan
-                className={
-                  "device-icon " +
-                  (deviceState.fan.level > 0
-                    ? "fan-spin-" + deviceState.fan.level
-                    : "")
-                }
-              />
-              <span className="device-name">Quạt gió</span>
-            </div>
-            {pendingDevices.fan ? (
-              <div className="loading-spinner"></div>
-            ) : (
-              <div className="level-buttons-full">
-                {["OFF", "1", "2", "3"].map(function (label, idx) {
-                  return (
-                    <button
-                      key={label}
-                      className={
-                        "level-btn " +
-                        (deviceState.fan.level === idx ? "level-active" : "")
-                      }
-                      onClick={function () {
-                        if (!isAutoMode) setFanLevel(idx);
-                      }}
-                      disabled={isAutoMode}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div
-            className={
-              "device-card device-card-vertical " +
-              (deviceState.ac.level > 0 ? "device-on device-ac-on" : "") +
-              " " +
-              (pendingDevices.ac ? "device-pending" : "")
-            }
-          >
-            <div className="device-top-row">
-              <FaSnowflake
-                className={
-                  "device-icon " +
-                  (deviceState.ac.level > 0
-                    ? "ac-mode-" + getAcMode(deviceState.ac.level).toLowerCase()
-                    : "")
-                }
-              />
-              <span className="device-name">Điều hòa</span>
-            </div>
-            {pendingDevices.ac ? (
-              <div className="loading-spinner"></div>
-            ) : (
-              <div className="level-buttons-full">
-                {["OFF", "Sleep", "Dry", "Cool"].map(function (mode) {
-                  return (
-                    <button
-                      key={mode}
-                      className={
-                        "level-btn " +
-                        (getAcMode(deviceState.ac.level) === mode
-                          ? "level-active"
-                          : "")
-                      }
-                      onClick={function () {
-                        if (!isAutoMode) setAcMode(mode);
-                      }}
-                      disabled={isAutoMode}
-                    >
-                      {mode}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div
-            className={
-              "device-card " +
-              (deviceState.warning.is_on ? "device-on device-warning-on" : "") +
-              " " +
-              (pendingDevices.warning ? "device-pending" : "")
-            }
-          >
-            <div className="device-left">
-              <FaExclamationTriangle
-                className={
-                  "device-icon " +
-                  (deviceState.warning.is_on ? "warning-active" : "")
-                }
-              />
-              <span className="device-name">Cảnh báo</span>
-            </div>
-            {pendingDevices.warning ? (
-              <div className="loading-spinner"></div>
-            ) : (
-              <div
-                className={
-                  "toggle-switch-sm " +
-                  (deviceState.warning.is_on
-                    ? "toggle-sm-on toggle-warning"
-                    : "")
-                }
-                onClick={function () {
-                  if (!isAutoMode) toggleDevice("warning");
-                }}
-              >
-                <div className="toggle-knob-sm"></div>
-              </div>
-            )}
+          <div className="panel-block">
+            <span className="panel-title">
+              <FaMobileAlt /> CÀI THÀNH APP
+            </span>
+            <p className="panel-text">
+              <strong>Android/PC:</strong> menu Chrome → "Cài đặt ứng dụng".
+              <br />
+              <strong>iPhone:</strong> Safari → nút Chia sẻ → "Thêm vào MH
+              chính".
+            </p>
           </div>
         </div>
       </div>
