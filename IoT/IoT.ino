@@ -4,8 +4,9 @@
 #include <ArduinoJson.h>
 
 // ===== WIFI / MQTT =====
-const char* ssid = "Rei";
-const char* password = "12345678";
+// Thong tin WiFi + MQTT nam trong secrets.h (khong commit len git)
+// Uu tien WIFI1, khong bat duoc thi doi sang WIFI2
+#include "secrets.h"
 
 const char* mqtt_server = "192.168.137.1";
 const int   mqtt_port   = 1407;
@@ -176,17 +177,34 @@ static void publishStatus(const char* action, int expected, int actual) {
 }
 
 // ===== WIFI =====
+// Thu ket noi 1 mang WiFi trong toi da timeoutMs
+static bool tryConnectWifi(const char* ssid, const char* pass, unsigned long timeoutMs) {
+  Serial.print("Dang thu WiFi: ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, pass);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  return WiFi.status() == WL_CONNECTED;
+}
+
 void setup_wifi() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(true);
   delay(200);
-  WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // Uu tien "Nghiem thoan", khong bat duoc thi doi sang "TP-Link-1407"
+  while (true) {
+    if (tryConnectWifi(WIFI1_SSID, WIFI1_PASS, 10000)) break;
+    if (tryConnectWifi(WIFI2_SSID, WIFI2_PASS, 10000)) break;
   }
-  Serial.println("\nWiFi Connected!");
+
+  Serial.print("WiFi Connected: ");
+  Serial.println(WiFi.SSID());
 }
 
 // ===== FORWARD DECLARE =====
@@ -196,6 +214,9 @@ void autoControl();
 // ===== MQTT RECONNECT =====
 void reconnect() {
   while (!client.connected()) {
+    // Rot WiFi thi ket noi lai (co fallback 2 mang)
+    if (WiFi.status() != WL_CONNECTED) setup_wifi();
+
     String clientId = "ESP32-ReiX-SmartHome-" + String((uint32_t)ESP.getEfuseMac(), HEX);
 
     if (client.connect(clientId.c_str(), "gianghoanglong", "14072004")) {
