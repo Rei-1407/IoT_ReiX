@@ -170,6 +170,7 @@ function ActionHistory() {
             <option value="light">Đèn ngủ</option>
             <option value="fan">Quạt gió</option>
             <option value="ac">Điều hòa</option>
+            <option value="warning">Cảnh báo</option>
           </select>
 
           <select

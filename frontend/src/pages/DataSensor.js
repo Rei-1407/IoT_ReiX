@@ -5,6 +5,7 @@ import {
   FaThermometerHalf,
   FaTint,
   FaSun,
+  FaWind,
   FaFileExport,
 } from "react-icons/fa";
 import "./DataSensor.css";
@@ -71,6 +72,7 @@ function DataSensor() {
       return <FaThermometerHalf className="table-icon icon-temp" />;
     if (key === "humidity") return <FaTint className="table-icon icon-hum" />;
     if (key === "light") return <FaSun className="table-icon icon-lux" />;
+    if (key === "windspeed") return <FaWind className="table-icon icon-wind" />;
     return null;
   };
 
@@ -151,6 +153,7 @@ function DataSensor() {
             <option value="temperature">Nhiệt độ</option>
             <option value="humidity">Độ ẩm</option>
             <option value="light">Ánh sáng</option>
+            <option value="windspeed">Tốc độ gió</option>
           </select>
 
           <select

@@ -8,7 +8,7 @@ USE iot_reix;
 -- ============================================================
 CREATE TABLE IF NOT EXISTS sensors (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  sensor_key ENUM('temperature','humidity','light') NOT NULL UNIQUE,
+  sensor_key ENUM('temperature','humidity','light','windspeed') NOT NULL UNIQUE,
   sensor_name VARCHAR(50) NOT NULL,
   unit VARCHAR(16) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS sensors (
 INSERT IGNORE INTO sensors (sensor_key, sensor_name, unit) VALUES
   ('temperature', 'Nhiệt độ', '°C'),
   ('humidity', 'Độ ẩm', '%'),
-  ('light', 'Ánh sáng', 'Lux');
+  ('light', 'Ánh sáng', 'Lux'),
+  ('windspeed', 'Tốc độ gió', 'm/s');
 
 -- ============================================================
 -- 2. BẢNG SENSOR_READINGS (dữ liệu cảm biến theo thời gian)
@@ -47,7 +48,8 @@ INSERT IGNORE INTO devices (device_key, device_name) VALUES
   ('fire', 'Báo cháy'),
   ('light', 'Đèn ngủ'),
   ('fan', 'Quạt gió'),
-  ('ac', 'Điều hòa');
+  ('ac', 'Điều hòa'),
+  ('warning', 'Cảnh báo');
 
 -- ============================================================
 -- 4. BẢNG DEVICE_STATE (trạng thái hiện tại, quan hệ 1:1)
