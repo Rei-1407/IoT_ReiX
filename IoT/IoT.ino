@@ -51,8 +51,8 @@ const int CH_LIGHT = 2;
 float temp = 0.0f, hum = 0.0f, lux = 0.0f;
 
 // ===== NGUONG BAO CHAY =====
-const float FIRE_ON_TEMP  = 50.0f;  // vuot nguong nay -> bao chay
-const float FIRE_OFF_TEMP = 45.0f;  // ha xuong duoi nguong nay moi coi la het chay
+const float FIRE_ON_TEMP  = 40.0f;  // vuot nguong nay -> bao chay
+const float FIRE_OFF_TEMP = 35.0f;  // ha xuong duoi nguong nay moi coi la het chay
 bool fireActive = false;
 
 // ntfy: gui ngay khi phat hien chay, sau do nhac lai moi 5 phut neu van chay

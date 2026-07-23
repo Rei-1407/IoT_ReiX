@@ -22,7 +22,7 @@ import {
 import "./Dashboard.css";
 
 var NTFY_TOPIC = "reix-bao-chay-1407";
-var FIRE_TEMP = 50;
+var FIRE_TEMP = 40;
 
 var CustomLegend = function (props) {
   var activeChart = props.activeChart;

@@ -43,7 +43,7 @@ IoT_ReiX/
 
 | LED | GPIO | Ý nghĩa |
 | --- | ---- | ------- |
-| 🔴 Đỏ | 23 | Nhiệt độ (PWM): 20°C bắt đầu sáng → 45°C sáng max. **Quá 50°C: nhấp nháy báo cháy** |
+| 🔴 Đỏ | 23 | Nhiệt độ (PWM): 20°C bắt đầu sáng → 45°C sáng max. **Quá 40°C: nhấp nháy báo cháy** |
 | 🔵 Xanh dương | 19 | Độ ẩm (PWM): 40% bắt đầu sáng → 90% sáng max |
 | 🟡 Vàng | 18 | Ánh sáng (PWM): trời càng tối đèn càng sáng (≥ 300 lux thì tắt) |
 | 💡 Thang nhiệt 1/2/3 | 15, 2, 4 | Mức nhiệt: ≥25°C sáng 1 đèn, ≥28°C sáng 2, ≥31°C sáng 3 |
@@ -51,10 +51,10 @@ IoT_ReiX/
 
 Nối LED qua điện trở ~220Ω xuống GND.
 
-## 🔥 Cảnh báo cháy (ngưỡng 50°C)
+## 🔥 Cảnh báo cháy (ngưỡng 40°C)
 
 1. **Trên web/app đang mở**: banner đỏ + notification hệ thống (bấm nút 🔔 trên dashboard để cấp quyền).
-2. **Khi không mở app**: ESP32 tự bắn cảnh báo lên **ntfy.sh** — cài app ntfy (Android/iOS), subscribe topic (xem trên dashboard) là nhận được. Nhắc lại mỗi 5 phút nếu còn cháy, hết cháy khi nhiệt hạ dưới 45°C.
+2. **Khi không mở app**: ESP32 tự bắn cảnh báo lên **ntfy.sh** — cài app ntfy (Android/iOS), subscribe topic (xem trên dashboard) là nhận được. Nhắc lại mỗi 5 phút nếu còn cháy, hết cháy khi nhiệt hạ dưới 35°C.
 
 ## 🚀 Cách chạy
 

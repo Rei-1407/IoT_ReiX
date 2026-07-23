@@ -13,7 +13,7 @@ var MQTT_USER = "webviewer";
 var MQTT_PASS = "12345678";
 var TOPIC_SENSOR = "reix/sensor";
 var TOPIC_STATUS = "reix/status";
-var FIRE_TEMP = 50;
+var FIRE_TEMP = 40;
 
 function App() {
   var [sensorData, setSensorData] = useState({ temp: 0, hum: 0, lux: 0 });
